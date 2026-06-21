@@ -2,6 +2,7 @@ local Menu = {}
 Menu.Visible = false
 Menu.PreventResetFrame = true
 Menu.MenuToggleKey = 0x4E -- N
+Menu.BuildVersion = "Build v8.0.1"
 Menu.CurrentCategory = 2
 Menu.CurrentPage = 1
 Menu.ItemsPerPage = 9
@@ -23,7 +24,7 @@ Menu.TabSelectorX = 0
 Menu.TabSelectorWidth = 0
 Menu.SmoothFactor = 0.22
 Menu.VisualSmoothFactor = 0.20
-Menu.ScrollbarThumbY = 0
+Menu.ScrollbarThumbY = {}
 Menu.PlayerInfoAlpha = 0.0
 Menu.PlayerInfo = nil
 Menu.GradientType = 1
@@ -719,10 +720,13 @@ function Menu.DrawFooter()
     local h = p.footerHeight
     Menu.DrawRoundedRect(x, footerY, w, h, 0,0,0, Menu.Colors.BgMain.a/255.0, p.footerRadius)
     Menu.DrawRect(x, footerY, w, 1, Menu.Colors.BorderNeon.r/255.0, Menu.Colors.BorderNeon.g/255.0, Menu.Colors.BorderNeon.b/255.0, 100)
-    local text = " .gg/sentexmodz  [ESE DEFA MAKINA AY] "
+    local text = ".gg/sentexmodz"
     local fs = 11
     local tw = Susano.GetTextWidth and Susano.GetTextWidth(text, fs) or (string.len(text)*6)
     Menu.DrawText(x+15, footerY+h/2-fs/2, text, fs, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 255)
+    local versionText = Menu.BuildVersion or "Build v8.0.1"
+    local vw = Susano.GetTextWidth and Susano.GetTextWidth(versionText, fs) or (string.len(versionText)*6)
+    Menu.DrawText(x+w-vw-15, footerY+h/2-fs/2, versionText, fs, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 255)
     local page = ""
     if Menu.OpenedCategory then
         local cat = Menu.Categories[Menu.OpenedCategory]
@@ -737,7 +741,7 @@ function Menu.DrawFooter()
     end
     if page ~= "" then
         local pw = Susano.GetTextWidth and Susano.GetTextWidth(page, fs) or (string.len(page)*6)
-        Menu.DrawText(x+w-pw-15, footerY+h/2-fs/2, page, fs, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255)
+        Menu.DrawText(x+w/2-pw/2, footerY+h/2-fs/2, page, fs, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255)
     end
 end
 
