@@ -36,6 +36,7 @@ Menu.LoadingDuration = 3000
 Menu.SelectingKey = false -- selector inicial eliminado
 Menu.MenuToggleKey = 0x22 -- PG DN / Page Down
 Menu.MenuToggleKeyName = "PG DN"
+Menu.MenuToggleControl = 11
 
 Menu.SelectingBind = false
 Menu.BindingItem = nil
@@ -928,6 +929,15 @@ function Menu.GetMenuToggleKeyName()
     return Menu.MenuToggleKeyName or Menu.GetKeyName(Menu.MenuToggleKey or 0x22)
 end
 
+-- Susano/FiveM: Page Down no siempre entra bien por VK 0x22 con GetAsyncKeyState.
+-- En el menú viejo funcionaba así: IsDisabledControlJustReleased(0, 11).
+function Menu.IsMenuToggleJustReleased()
+    if IsDisabledControlJustReleased then
+        return IsDisabledControlJustReleased(0, 11) == true
+    end
+    return Menu.IsKeyJustPressed(Menu.MenuToggleKey or 0x22)
+end
+
 function Menu.HandleInput()
     if Menu.IsLoading or not Menu.LoadingComplete then return end
     if Menu.InputOpen then return end
@@ -983,12 +993,23 @@ function Menu.HandleInput()
         end
     end
 
-    -- Tecla para mostrar/ocultar menú
-    local toggleKey = Menu.MenuToggleKey or 0x22 -- PG DN / Page Down
-    if Menu.IsKeyJustPressed(toggleKey) then
+    -- Tecla para mostrar/ocultar menú: PG DN / Page Down.
+    -- Usamos el control 11 porque en Susano/FiveM funciona mejor que VK 0x22.
+    if Menu.IsMenuToggleJustReleased() then
         Menu.Visible = not Menu.Visible
-        if not Menu.Visible and not Menu.ShowKeybinds then
-            if Susano.ResetFrame then Susano.ResetFrame() end
+        if Menu.Visible then
+            Menu.CurrentCategory = 2
+            Menu.OpenedCategory = nil
+            Menu.CurrentItem = 1
+            Menu.CurrentTab = 1
+            Menu.CategoryScrollOffset = 0
+            Menu.ItemScrollOffset = 0
+            if PlaySoundFrontend then PlaySoundFrontend(-1, "SELECT", "HUD_FRONTEND_DEFAULT_SOUNDSET", true) end
+        else
+            if PlaySoundFrontend then PlaySoundFrontend(-1, "BACK", "HUD_FRONTEND_DEFAULT_SOUNDSET", true) end
+            if not Menu.ShowKeybinds then
+                if Susano.ResetFrame then Susano.ResetFrame() end
+            end
         end
     end
 
@@ -1467,6 +1488,7 @@ Menu.SelectingBind = false
 Menu.KeySelectorAlpha = 0.0
 Menu.MenuToggleKey = 0x22 -- Page Down / PG DN
 Menu.MenuToggleKeyName = "PG DN"
+Menu.MenuToggleControl = 11
 
 function Menu.UpdateLoadingState()
     if Menu.LoadingComplete then
