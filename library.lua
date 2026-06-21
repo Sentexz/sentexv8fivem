@@ -24,7 +24,7 @@ Menu.GradientType = 1
 Menu.ScrollbarPosition = 1
 
 Menu.LoadingBarAlpha = 0.0
-Menu.KeySelectorAlpha = 0.0 -- desactivado
+Menu.KeySelectorAlpha = 0.0
 Menu.KeybindsInterfaceAlpha = 0.0
 
 Menu.LoadingProgress = 0.0
@@ -33,11 +33,10 @@ Menu.LoadingComplete = false
 Menu.LoadingStartTime = nil
 Menu.LoadingDuration = 3000
 
-Menu.SelectingKey = false -- selector inicial eliminado
-Menu.MenuToggleKey = 0x4E -- N
-Menu.MenuToggleKeyName = "N"
-Menu.MenuToggleControl = 249
-Menu.PreventResetFrame = true
+Menu.SelectingKey = false
+Menu.SelectedKey = 0x4E -- N
+Menu.SelectedKeyName = "N"
+Menu.TempKeyPressed = nil          -- para mostrar tecla en selector de menú
 
 Menu.SelectingBind = false
 Menu.BindingItem = nil
@@ -61,60 +60,50 @@ function Menu.SetAnticheatInfo(detectedList)
     end
 end
 
--- ========== PALETA: AURORA FORGE / DISEÑO NUEVO ==========
+-- ========== PALETA: FONDO NEGRO 30% OPACIDAD ==========
 Menu.Colors = {
-    BgMain      = { r = 8,   g = 10,  b = 18,  a = 232 },
-    BgPanel     = { r = 14,  g = 17,  b = 29,  a = 238 },
-    BgSoft      = { r = 22,  g = 27,  b = 43,  a = 210 },
-    BorderNeon  = { r = 155, g = 92,  b = 255, a = 190 },
-    Accent      = { r = 255, g = 88,  b = 146 },
-    Accent2     = { r = 87,  g = 205, b = 255 },
-    AccentDark  = { r = 124, g = 55,  b = 210 },
-    Text        = { r = 245, g = 247, b = 255 },
-    TextDim     = { r = 139, g = 148, b = 178 },
-    Selected    = { r = 255, g = 88,  b = 146 },
-    Success     = { r = 75,  g = 235, b = 165 },
-    Warning     = { r = 255, g = 205, b = 95  },
+    BgMain      = { r = 0,   g = 0,   b = 0,   a = 77 },   -- 30% opacidad
+    BorderNeon  = { r = 0,   g = 210, b = 255, a = 150 },
+    Accent      = { r = 0,   g = 180, b = 255 },
+    AccentDark  = { r = 0,   g = 120, b = 200 },
+    Text        = { r = 255, g = 255, b = 255 },
+    TextDim     = { r = 160, g = 170, b = 210 },
+    Selected    = { r = 0,   g = 150, b = 230 },
 }
-Menu.CurrentTheme = "AuroraForge"
+Menu.CurrentTheme = "BlackGlass"
 
 function Menu.ApplyTheme(themeName)
-    Menu.CurrentTheme = themeName or "AuroraForge"
-    Menu.Colors.BgMain     = { r = 8,   g = 10,  b = 18,  a = 232 }
-    Menu.Colors.BgPanel    = { r = 14,  g = 17,  b = 29,  a = 238 }
-    Menu.Colors.BgSoft     = { r = 22,  g = 27,  b = 43,  a = 210 }
-    Menu.Colors.BorderNeon = { r = 155, g = 92,  b = 255, a = 190 }
-    Menu.Colors.Accent     = { r = 255, g = 88,  b = 146 }
-    Menu.Colors.Accent2    = { r = 87,  g = 205, b = 255 }
-    Menu.Colors.AccentDark = { r = 124, g = 55,  b = 210 }
-    Menu.Colors.Text       = { r = 245, g = 247, b = 255 }
-    Menu.Colors.TextDim    = { r = 139, g = 148, b = 178 }
-    Menu.Colors.Selected   = { r = 255, g = 88,  b = 146 }
-    Menu.Colors.Success    = { r = 75,  g = 235, b = 165 }
-    Menu.Colors.Warning    = { r = 255, g = 205, b = 95 }
-    if Menu.Banner and Menu.Banner.enabled and Menu.Banner.imageUrl then
+    -- Solo mantenemos un tema consistente (negro con acentos neón)
+    Menu.Colors.BgMain     = { r = 0,   g = 0,   b = 0,   a = 77 }
+    Menu.Colors.BorderNeon = { r = 0,   g = 210, b = 255, a = 150 }
+    Menu.Colors.Accent     = { r = 0,   g = 180, b = 255 }
+    Menu.Colors.AccentDark = { r = 0,   g = 120, b = 200 }
+    Menu.Colors.Text       = { r = 255, g = 255, b = 255 }
+    Menu.Colors.TextDim    = { r = 160, g = 170, b = 210 }
+    Menu.Colors.Selected   = { r = 0,   g = 150, b = 230 }
+    if Menu.Banner.enabled and Menu.Banner.imageUrl then
         Menu.LoadBannerTexture(Menu.Banner.imageUrl)
     end
 end
 
 -- Dimensiones con bordes delgados
 Menu.Position = {
-    x = 26,
-    y = 90,
-    width = 405,
-    itemHeight = 39,
-    mainMenuHeight = 33,
-    headerHeight = 112,
-    footerHeight = 32,
-    footerSpacing = 8,
-    mainMenuSpacing = 7,
-    footerRadius = 10,
-    itemRadius = 9,
-    scrollbarWidth = 5,
-    scrollbarPadding = 8,
-    headerRadius = 14,
+    x = 20,
+    y = 80,
+    width = 360,
+    itemHeight = 34,
+    mainMenuHeight = 26,
+    headerHeight = 100,
+    footerHeight = 26,
+    footerSpacing = 5,
+    mainMenuSpacing = 5,
+    footerRadius = 4,
+    itemRadius = 4,
+    scrollbarWidth = 4,
+    scrollbarPadding = 4,
+    headerRadius = 6,
     anticheatPanelHeight = 0,
-    anticheatSpacing = 8
+    anticheatSpacing = 6
 }
 Menu.Scale = 1.0
 
@@ -217,58 +206,25 @@ function Menu.DrawRoundedRect(x, y, w, h, r, g, b, a, radius)
     end
 end
 
-
-function Menu.DrawGradientVertical(x, y, w, h, c1, c2, a)
-    local steps = 22
-    local stepH = h / steps
-    for i=0, steps-1 do
-        local t = i / math.max(1, steps-1)
-        local r = c1.r + (c2.r - c1.r) * t
-        local g = c1.g + (c2.g - c1.g) * t
-        local b = c1.b + (c2.b - c1.b) * t
-        Menu.DrawRect(x, y + i*stepH, w, math.ceil(stepH)+1, r, g, b, a)
-    end
-end
-
-function Menu.DrawSoftShadow(x, y, w, h, radius)
-    radius = radius or 10
-    for i=1, 5 do
-        Menu.DrawRoundedRect(x-i*2, y-i*2, w+i*4, h+i*4, 0, 0, 0, 24 - i*3, radius+i*2)
-    end
-end
-
-function Menu.DrawOutlinedRoundedRect(x, y, w, h, r, g, b, a, radius)
-    Menu.DrawRoundedRect(x, y, w, h, r, g, b, a, radius)
-    Menu.DrawRect(x+radius, y, w-radius*2, 1, Menu.Colors.BorderNeon.r, Menu.Colors.BorderNeon.g, Menu.Colors.BorderNeon.b, 150)
-    Menu.DrawRect(x+radius, y+h-1, w-radius*2, 1, Menu.Colors.Accent.r, Menu.Colors.Accent.g, Menu.Colors.Accent.b, 85)
-    Menu.DrawRect(x, y+radius, 1, h-radius*2, Menu.Colors.BorderNeon.r, Menu.Colors.BorderNeon.g, Menu.Colors.BorderNeon.b, 90)
-    Menu.DrawRect(x+w-1, y+radius, 1, h-radius*2, Menu.Colors.Accent2.r, Menu.Colors.Accent2.g, Menu.Colors.Accent2.b, 90)
-end
-
 -- Header (banner o logo)
 function Menu.DrawHeader()
     local p = Menu.GetScaledPosition()
     local x, y, w = p.x, p.y, p.width-1
-    local h = Menu.Banner.enabled and (Menu.Banner.height * (Menu.Scale or 1.0)) or p.headerHeight
-
-    Menu.DrawSoftShadow(x, y, w, h, p.headerRadius)
-    Menu.DrawOutlinedRoundedRect(x, y, w, h, Menu.Colors.BgPanel.r, Menu.Colors.BgPanel.g, Menu.Colors.BgPanel.b, Menu.Colors.BgPanel.a, p.headerRadius)
-    Menu.DrawGradientVertical(x+1, y+1, w-2, h-2, {r=20,g=24,b=42}, {r=9,g=11,b=20}, 225)
-
+    local h = p.headerHeight
+    local bannerH = Menu.Banner.enabled and (Menu.Banner.height * (Menu.Scale or 1.0)) or h
     if Menu.Banner.enabled and Menu.bannerTexture and Menu.bannerTexture>0 and Susano.DrawImage then
-        Susano.DrawImage(Menu.bannerTexture, x+8, y+8, w-16, h-16, 1,1,1,0.78,0)
-        Menu.DrawRect(x+8, y+h-22, w-16, 14, 0,0,0, 135)
+        Susano.DrawImage(Menu.bannerTexture, x, y, w, bannerH, 1,1,1,1,0)
+    else
+        Menu.DrawRoundedRect(x, y, w, h, 0,0,0, Menu.Colors.BgMain.a/255.0, p.headerRadius)
+        Menu.DrawRect(x, y+h-2, w, 1, Menu.Colors.BorderNeon.r/255.0, Menu.Colors.BorderNeon.g/255.0, Menu.Colors.BorderNeon.b/255.0, Menu.Colors.BorderNeon.a/255.0)
+        local logo = "⚡ PHAZE ⚡"
+        local fs = 28
+        local tw = Susano.GetTextWidth and Susano.GetTextWidth(logo, fs) or (string.len(logo)*14)
+        Menu.DrawText(x+w/2-tw/2, y+h/2-fs/2, logo, fs, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 1.0)
     end
-
-    Menu.DrawText(x+22, y+18, "PHAZE", 27, Menu.Colors.Text.r, Menu.Colors.Text.g, Menu.Colors.Text.b, 255)
-    Menu.DrawText(x+24, y+48, "PRIVATE CONTROL SYSTEM", 11, Menu.Colors.TextDim.r, Menu.Colors.TextDim.g, Menu.Colors.TextDim.b, 220)
-    Menu.DrawText(x+w-86, y+20, "LIVE", 11, Menu.Colors.Success.r, Menu.Colors.Success.g, Menu.Colors.Success.b, 255)
-    Menu.DrawRoundedRect(x+w-30, y+23, 9, 9, Menu.Colors.Success.r, Menu.Colors.Success.g, Menu.Colors.Success.b, 255, 5)
-    Menu.DrawRect(x+22, y+h-18, w-44, 2, Menu.Colors.Accent.r, Menu.Colors.Accent.g, Menu.Colors.Accent.b, 190)
-    Menu.DrawRect(x+22, y+h-15, (w-44)*0.45, 1, Menu.Colors.Accent2.r, Menu.Colors.Accent2.g, Menu.Colors.Accent2.b, 210)
 end
 
-
+-- Scrollbar delgada
 function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems, isMainMenu, menuWidth)
     if totalItems < 1 then return end
     local p = Menu.GetScaledPosition()
@@ -750,55 +706,75 @@ function Menu.DrawLoadingBar(alpha)
     if alpha <= 0 then return end
     local sw, sh = 1920, 1080
     if Susano.GetScreenWidth then sw, sh = Susano.GetScreenWidth(), Susano.GetScreenHeight() end
-    local w, h = 560, 118
-    local x, y = sw/2 - w/2, sh/2 - h/2
-    Menu.DrawSoftShadow(x, y, w, h, 18)
-    Menu.DrawOutlinedRoundedRect(x, y, w, h, 10, 12, 23, 235*alpha, 18)
-    Menu.DrawText(x+28, y+20, "CARGANDO INTERFAZ", 18, Menu.Colors.Text.r, Menu.Colors.Text.g, Menu.Colors.Text.b, 255*alpha)
-    Menu.DrawText(x+28, y+45, "Preparando módulos, categorías y animaciones...", 12, Menu.Colors.TextDim.r, Menu.Colors.TextDim.g, Menu.Colors.TextDim.b, 220*alpha)
-
-    local barX, barY, barW, barH = x+28, y+78, w-56, 10
-    Menu.DrawRoundedRect(barX, barY, barW, barH, 28, 32, 50, 220*alpha, 5)
-    local progress = math.min(100, math.max(0, Menu.LoadingProgress or 0)) / 100
-    if progress > 0 then
-        Menu.DrawRoundedRect(barX, barY, barW*progress, barH, Menu.Colors.Accent.r, Menu.Colors.Accent.g, Menu.Colors.Accent.b, 255*alpha, 5)
-        Menu.DrawRect(barX, barY, barW*progress, 2, Menu.Colors.Accent2.r, Menu.Colors.Accent2.g, Menu.Colors.Accent2.b, 210*alpha)
+    local w = 500
+    local h = 4
+    local x = sw/2 - w/2
+    local y = sh - 80
+    Menu.DrawRoundedRect(x, y, w, h, 40,50,80, 180*alpha, 2)
+    local progressW = w * (Menu.LoadingProgress / 100)
+    if progressW > 0 then
+        Menu.DrawRoundedRect(x, y, progressW, h, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255*alpha, 2)
+        Menu.DrawRect(x+progressW-3, y, 4, h, 1,1,1, 150*alpha)
     end
-    local percent = string.format("%.0f%%", progress*100)
-    Menu.DrawText(barX+barW-44, y+20, percent, 17, Menu.Colors.Accent2.r, Menu.Colors.Accent2.g, Menu.Colors.Accent2.b, 255*alpha)
+    local percent = string.format("%.0f%%", Menu.LoadingProgress)
+    local fs = 15
+    local tw = Susano.GetTextWidth and Susano.GetTextWidth(percent, fs) or (string.len(percent)*8)
+    Menu.DrawText(x+w/2-tw/2, y-20, percent, fs, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255*alpha)
+    local status = "INICIANDO"
+    if Menu.LoadingProgress >= 100 then status = "LISTO" end
+    local stw = Susano.GetTextWidth and Susano.GetTextWidth(status, 13) or (string.len(status)*7)
+    Menu.DrawText(x+w/2-stw/2, y-38, status, 13, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255*alpha)
 end
 
-
+-- Selector de tecla (para abrir menú y para keybinds) CON BANNER Y VISUALIZACIÓN EN VIVO
 function Menu.DrawKeySelector(alpha)
     if alpha <= 0 then return end
     local sw, sh = 1920, 1080
     if Susano.GetScreenWidth then sw, sh = Susano.GetScreenWidth(), Susano.GetScreenHeight() end
-    local w, h = 500, 196
-    local x, y = sw/2 - w/2, sh/2 - h/2
-    Menu.DrawSoftShadow(x, y, w, h, 20)
-    Menu.DrawOutlinedRoundedRect(x, y, w, h, 11, 13, 26, 240*alpha, 20)
-    Menu.DrawGradientVertical(x+1, y+1, w-2, h-2, {r=23,g=26,b=45}, {r=9,g=10,b=20}, 235*alpha)
+    local w = 420
+    local h = 150
+    local x = sw/2 - w/2
+    local y = sh - 200
 
-    Menu.DrawText(x+28, y+24, "SELECCIONA TU KEYBIND", 20, Menu.Colors.Text.r, Menu.Colors.Text.g, Menu.Colors.Text.b, 255*alpha)
-    Menu.DrawText(x+29, y+53, "Esta tecla abrirá/cerrará el menú. Pulsa una tecla y confirma con ENTER.", 12, Menu.Colors.TextDim.r, Menu.Colors.TextDim.g, Menu.Colors.TextDim.b, 220*alpha)
+    -- Fondo principal
+    Menu.DrawRoundedRect(x, y, w, h, 0,0,0, 220*alpha, 6)
+    Menu.DrawRect(x, y, w, 1, Menu.Colors.BorderNeon.r/255.0, Menu.Colors.BorderNeon.g/255.0, Menu.Colors.BorderNeon.b/255.0, 200*alpha)
 
-    local itemName = Menu.BindingItem and Menu.BindingItem.name or "Keybind"
+    -- Banner (si está habilitado)
+    local bannerH = 0
+    if Menu.Banner.enabled and Menu.bannerTexture and Menu.bannerTexture>0 and Susano.DrawImage then
+        bannerH = 50
+        Susano.DrawImage(Menu.bannerTexture, x+10, y+5, w-20, bannerH, 1,1,1, 0.8*alpha, 0)
+    else
+        -- Logo textual pequeño
+        bannerH = 30
+        Menu.DrawText(x+20, y+8, "⚡ PHAZE ⚡", 20, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255*alpha)
+    end
+
+    local title = "▸ ASIGNAR TECLA ◂"
+    Menu.DrawText(x+20, y + bannerH + 12, title, 14, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255*alpha)
+    
+    local itemName = Menu.BindingItem and Menu.BindingItem.name or "Abrir menú"
     local displayKey = Menu.BindingKeyName or "..."
-    if Menu.SelectingBind and Menu.TempPressedKey then displayKey = Menu.TempPressedKey end
-
-    Menu.DrawRoundedRect(x+28, y+84, w-56, 70, 18, 22, 38, 220*alpha, 12)
-    Menu.DrawText(x+48, y+102, itemName, 14, Menu.Colors.Text.r, Menu.Colors.Text.g, Menu.Colors.Text.b, 255*alpha)
-    Menu.DrawText(x+48, y+125, "ENTER confirmar  •  ESC cancelar", 11, Menu.Colors.TextDim.r, Menu.Colors.TextDim.g, Menu.Colors.TextDim.b, 210*alpha)
-
-    local boxW, boxH = 112, 48
-    local boxX, boxY = x + w - boxW - 48, y + 95
-    Menu.DrawRoundedRect(boxX, boxY, boxW, boxH, 5, 7, 14, 245*alpha, 10)
-    Menu.DrawRect(boxX+10, boxY+boxH-2, boxW-20, 2, Menu.Colors.Accent.r, Menu.Colors.Accent.g, Menu.Colors.Accent.b, 230*alpha)
-    local kw = Susano.GetTextWidth and Susano.GetTextWidth(displayKey, 20) or (string.len(displayKey)*10)
-    Menu.DrawText(boxX+boxW/2-kw/2, boxY+boxH/2-10, displayKey, 20, Menu.Colors.Warning.r, Menu.Colors.Warning.g, Menu.Colors.Warning.b, 255*alpha)
+    if Menu.SelectingKey and Menu.TempKeyPressed then
+        displayKey = Menu.TempKeyPressed
+    elseif Menu.SelectingBind and Menu.TempPressedKey then
+        displayKey = Menu.TempPressedKey
+    end
+    
+    Menu.DrawText(x+20, y + bannerH + 40, itemName, 14, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255*alpha)
+    Menu.DrawText(x+20, y + bannerH + 65, "Presiona cualquier tecla...", 12, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 200*alpha)
+    
+    local boxW, boxH = 75, 45
+    local boxX = x + w - boxW - 20
+    local boxY = y + h/2 - boxH/2
+    Menu.DrawRect(boxX, boxY, boxW, boxH, 0,0,0, 255*alpha)
+    Menu.DrawRect(boxX, boxY, boxW, 1, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 200*alpha)
+    local kw = Susano.GetTextWidth and Susano.GetTextWidth(displayKey, 18) or (string.len(displayKey)*9)
+    Menu.DrawText(boxX+boxW/2-kw/2, boxY+boxH/2-9, displayKey, 18, 255,240,100, 255*alpha)
 end
 
-
+-- Panel de teclas rápidas (lateral)
 function Menu.DrawKeybindsInterface(alpha)
     if alpha <= 0 then return end
     local binds = {}
@@ -849,13 +825,12 @@ end
 
 function Menu.DrawBackground()
     local p = Menu.GetScaledPosition()
-    local x, y = p.x, p.y
+    local x = p.x
+    local y = p.y
     local w = p.width - 1
     local actualHeight = Menu.GetActualHeight()
-    Menu.DrawSoftShadow(x, y, w, actualHeight, p.headerRadius)
-    Menu.DrawOutlinedRoundedRect(x, y, w, actualHeight, Menu.Colors.BgMain.r, Menu.Colors.BgMain.g, Menu.Colors.BgMain.b, 210, p.headerRadius)
-    Menu.DrawGradientVertical(x+1, y+1, w-2, actualHeight-2, {r=12,g=15,b=28}, {r=6,g=8,b=15}, 228)
-
+    -- Fondo negro con 30% opacidad
+    Menu.DrawRoundedRect(x, y, w, actualHeight, 0,0,0, Menu.Colors.BgMain.a/255.0, p.headerRadius)
     if Menu.ShowSnowflakes then
         for _, part in ipairs(Menu.Particles) do
             part.y = part.y + part.speedY
@@ -864,31 +839,19 @@ function Menu.DrawBackground()
             if part.x < 0 then part.x = 1 elseif part.x > 1 then part.x = 0 end
             local px = x + part.x * w
             local py = y + part.y * actualHeight
-            Menu.DrawRect(px, py, part.size+1, part.size+1, Menu.Colors.Accent2.r, Menu.Colors.Accent2.g, Menu.Colors.Accent2.b, 55)
+            Menu.DrawRect(px, py, part.size, part.size, 200,220,255, 100)
         end
     end
 end
 
-
-function Menu.IsKeyDownRaw(keyCode)
-    if not Susano.GetAsyncKeyState then return false end
-    local a, b = Susano.GetAsyncKeyState(keyCode)
-
-    if type(a) == "boolean" then return a == true end
-    if type(b) == "boolean" then return b == true or a == true end
-    if type(a) == "number" then return a ~= 0 end
-    if type(a) == "table" then
-        return a.down == true or a.pressed == true or a[1] == true or a[1] == 1
-    end
-
-    return false
-end
-
+-- ========== MANEJO DE ENTRADA ==========
+Menu.KeyStates = {}
 function Menu.IsKeyJustPressed(keyCode)
-    local down = Menu.IsKeyDownRaw(keyCode)
+    if not Susano.GetAsyncKeyState then return false end
+    local down, pressed = Susano.GetAsyncKeyState(keyCode)
     local wasDown = Menu.KeyStates[keyCode] or false
-    Menu.KeyStates[keyCode] = down
-    return down and not wasDown
+    Menu.KeyStates[keyCode] = down == true
+    return (pressed == true) or (down == true and not wasDown)
 end
 
 local captureKeys = {
@@ -926,26 +889,6 @@ Menu.KeyNames = {
 }
 function Menu.GetKeyName(k) return Menu.KeyNames[k] or ("0x"..string.format("%02X",k)) end
 
-function Menu.GetMenuToggleKeyName()
-    return Menu.MenuToggleKeyName or Menu.GetKeyName(Menu.MenuToggleKey or 0x4E)
-end
-
--- Susano/FiveM: tecla fija N.
--- FiveM suele mapear N como control 249; Susano puede exponerlo también por VK 0x4E.
-function Menu.IsMenuToggleJustReleased()
-    local control = Menu.MenuToggleControl or 249
-
-    -- Rutas FiveM/GTA: probamos released y pressed para builds que no disparan una de las dos.
-    if IsDisabledControlJustReleased and IsDisabledControlJustReleased(0, control) then return true end
-    if IsControlJustReleased and IsControlJustReleased(0, control) then return true end
-    if IsDisabledControlJustPressed and IsDisabledControlJustPressed(0, control) then return true end
-    if IsControlJustPressed and IsControlJustPressed(0, control) then return true end
-
-    -- Fallback Windows/Susano.
-    if Menu.IsKeyJustPressed and Menu.IsKeyJustPressed(Menu.MenuToggleKey or 0x4E) then return true end
-
-    return false
-end
 function Menu.HandleInput()
     if Menu.IsLoading or not Menu.LoadingComplete then return end
     if Menu.InputOpen then return end
@@ -973,7 +916,25 @@ function Menu.HandleInput()
         return
     end
 
-    -- Selector de tecla inicial eliminado: el menú abre/cierra con PG DN.
+    -- Selección de tecla para abrir menú
+    if Menu.SelectingKey then
+        if Menu.IsKeyJustPressed(0x0D) then
+            if Menu.SelectedKey then
+                Menu.SelectingKey = false
+                Menu.TempKeyPressed = nil
+            end
+            return
+        end
+        for _,k in ipairs(captureKeys) do
+            if k ~= 0x0D and Menu.IsKeyJustPressed(k) then
+                Menu.SelectedKey = k
+                Menu.SelectedKeyName = Menu.GetKeyName(k)
+                Menu.TempKeyPressed = Menu.SelectedKeyName
+                break
+            end
+        end
+        return
+    end
 
     -- Ejecutar keybinds
     for _,cat in ipairs(Menu.Categories) do
@@ -1001,8 +962,10 @@ function Menu.HandleInput()
         end
     end
 
-    -- Tecla para mostrar/ocultar menú: N.
-    if Menu.IsMenuToggleJustReleased() then
+    -- Tecla fija para mostrar/ocultar menú: N.
+    -- Usa el método nativo de esta librería para Susano: GetAsyncKeyState vía Menu.IsKeyJustPressed.
+    local toggleKey = Menu.SelectedKey or 0x4E
+    if Menu.IsKeyJustPressed(toggleKey) then
         Menu.Visible = not Menu.Visible
         if Menu.Visible then
             Menu.CurrentCategory = 2
@@ -1011,12 +974,8 @@ function Menu.HandleInput()
             Menu.CurrentTab = 1
             Menu.CategoryScrollOffset = 0
             Menu.ItemScrollOffset = 0
-            if PlaySoundFrontend then PlaySoundFrontend(-1, "SELECT", "HUD_FRONTEND_DEFAULT_SOUNDSET", true) end
-        else
-            if PlaySoundFrontend then PlaySoundFrontend(-1, "BACK", "HUD_FRONTEND_DEFAULT_SOUNDSET", true) end
-            if not Menu.ShowKeybinds then
-                if Susano.ResetFrame and not Menu.PreventResetFrame then Susano.ResetFrame() end
-            end
+        elseif not Menu.ShowKeybinds then
+            if Susano.ResetFrame then Susano.ResetFrame() end
         end
     end
 
@@ -1179,13 +1138,22 @@ function Menu.HandleInput()
                         if item.onClick then item.onClick(item.value) end
                     elseif item.type == "action" then
                         if item.name == "Cambiar tecla de menú" then
-                            -- Selector eliminado. Tecla fija: PG DN / Page Down.
-                        else
-                            if item.onClick then item.onClick() end
+                            Menu.SelectingKey = true
+                            Menu.TempKeyPressed = nil
                         end
+                        if item.onClick then item.onClick() end
                     elseif item.type == "selector" then
                         if item.onClick then item.onClick(item.selected, item.options[item.selected]) end
                     end
+                end
+            elseif Menu.IsKeyJustPressed(0x78) then  -- F9
+                local item = curTab.items[Menu.CurrentItem]
+                if item and not item.isSeparator then
+                    Menu.SelectingBind = true
+                    Menu.BindingItem = item
+                    Menu.BindingKey = item.bindKey
+                    Menu.BindingKeyName = item.bindKeyName
+                    Menu.TempPressedKey = item.bindKeyName or "..."
                 end
             end
         end
@@ -1281,7 +1249,7 @@ function Menu.Render()
     else
         Menu.LoadingBarAlpha = math.max(0, Menu.LoadingBarAlpha - anim)
     end
-    if Menu.SelectingBind then
+    if Menu.SelectingKey or Menu.SelectingBind then
         Menu.KeySelectorAlpha = math.min(1, Menu.KeySelectorAlpha + anim)
     else
         Menu.KeySelectorAlpha = math.max(0, Menu.KeySelectorAlpha - anim)
@@ -1307,7 +1275,7 @@ function Menu.Render()
     if Menu.KeySelectorAlpha > 0 then Menu.DrawKeySelector(Menu.KeySelectorAlpha) end
     if Susano.SubmitFrame then Susano.SubmitFrame() end
     if not Menu.Visible and not Menu.ShowKeybinds and Menu.LoadingBarAlpha<=0 and Menu.KeySelectorAlpha<=0 then
-        if Susano.ResetFrame and not Menu.PreventResetFrame then Susano.ResetFrame() end
+        if Susano.ResetFrame then Susano.ResetFrame() end
     end
 end
 
@@ -1377,6 +1345,7 @@ CreateThread(function()
             Menu.IsLoading = false
             Menu.LoadingComplete = true
             Menu.SelectingKey = false
+            Menu.TempKeyPressed = nil
             break
         end
         Wait(0)
@@ -1392,7 +1361,7 @@ CreateThread(function()
 end)
 
 if Menu.Banner.enabled and Menu.Banner.imageUrl then Menu.LoadBannerTexture(Menu.Banner.imageUrl) end
-Menu.ApplyTheme("AuroraForge")
+Menu.ApplyTheme("BlackGlass")
 
 -- Valores por defecto (fondo negro ya está, nieve activada)
 CreateThread(function()
@@ -1416,170 +1385,5 @@ CreateThread(function()
         end
     end
 end)
-
--- =====================================================
--- PLAYER INFO PANEL MODULE (SAFE DROP-IN ADDON)
--- =====================================================
-
-Menu.PlayerInfoPanel = Menu.PlayerInfoPanel or {
-    visible = false,
-    data = nil,
-    alpha = 0.0
-}
-
-function Menu.SetSelectedPlayerInfo(data)
-    Menu.PlayerInfoPanel.visible = true
-    Menu.PlayerInfoPanel.data = data
-end
-
-function Menu.HidePlayerInfo()
-    Menu.PlayerInfoPanel.visible = false
-    Menu.PlayerInfoPanel.data = nil
-end
-
-function Menu.DrawPlayerInfoPanel()
-    local p = Menu.PlayerInfoPanel
-    if not p.data then return end
-
-    local scale = Menu.Scale or 1.0
-
-    local x = Menu.Position.x + Menu.Position.width + 12
-    local y = Menu.Position.y + 40
-
-    local w = 250 * scale
-    local h = 160 * scale
-
-    -- background
-    Menu.DrawRoundedRect(x, y, w, h, 0, 0, 0, 0.78, 6)
-
-    -- top accent line
-    Menu.DrawRect(
-        x, y, w, 1,
-        Menu.Colors.BorderNeon.r/255.0,
-        Menu.Colors.BorderNeon.g/255.0,
-        Menu.Colors.BorderNeon.b/255.0,
-        220
-    )
-
-    -- title
-    Menu.DrawText(
-        x + 12,
-        y + 10,
-        "PLAYER INFO",
-        14,
-        Menu.Colors.Accent.r/255.0,
-        Menu.Colors.Accent.g/255.0,
-        Menu.Colors.Accent.b/255.0,
-        1
-    )
-
-    local d = p.data
-
-    Menu.DrawText(x + 12, y + 45, "ID: " .. tostring(d.id or "N/A"), 12, 1,1,1,1)
-    Menu.DrawText(x + 12, y + 65, "NAME: " .. tostring(d.name or "N/A"), 12, 1,1,1,1)
-    Menu.DrawText(x + 12, y + 85, "DIST: " .. tostring(d.distance or 0) .. "m", 12, 1,1,1,1)
-    Menu.DrawText(x + 12, y + 105, "WEAPON: " .. tostring(d.weapon or "NONE"), 12, 1,1,1,1)
-
-    if d.health then
-        Menu.DrawText(x + 12, y + 125, "HEALTH: " .. tostring(d.health), 12, 1,1,1,1)
-    end
-end
-
--- =====================================================
--- SAFE HOOK INTO RENDER + BOOT FLOW FIXED / N ONLY
--- =====================================================
-
-Menu.SelectingKey = false
-Menu.SelectingBind = false
-Menu.KeySelectorAlpha = 0.0
-Menu.MenuToggleKey = 0x4E -- N
-Menu.MenuToggleKeyName = "N"
-Menu.MenuToggleControl = 249
-
-function Menu.UpdateLoadingState()
-    if Menu.LoadingComplete then
-        Menu.IsLoading = false
-        Menu.LoadingProgress = 100
-        return
-    end
-
-    local now = nil
-    if GetGameTimer then now = GetGameTimer() end
-    if not now then now = math.floor(os.clock() * 1000) end
-
-    if not Menu.LoadingStartTime or Menu.LoadingStartTime <= 0 then
-        Menu.LoadingStartTime = now
-    end
-
-    local elapsed = now - Menu.LoadingStartTime
-    if elapsed < 0 then elapsed = 0 end
-
-    Menu.LoadingProgress = math.min(100, (elapsed / (Menu.LoadingDuration or 3000)) * 100)
-
-    if Menu.LoadingProgress >= 100 then
-        Menu.LoadingProgress = 100
-        Menu.IsLoading = false
-        Menu.LoadingComplete = true
-        Menu.LoadingBarAlpha = 0.0
-        Menu.KeySelectorAlpha = 0.0
-        Menu.SelectingKey = false
-        Menu.SelectingBind = false
-    end
-end
-
-function Menu.Render()
-    if Menu.TopLevelTabs and not Menu.Categories then Menu.UpdateCategoriesFromTopTab() end
-    if not Susano.BeginFrame then return end
-
-    Menu.UpdateLoadingState()
-
-    local dt = GetFrameTime and GetFrameTime() or 0.016
-    local anim = 6.0 * dt
-
-    if Menu.IsLoading then
-        Menu.LoadingBarAlpha = math.min(1, Menu.LoadingBarAlpha + anim)
-    else
-        Menu.LoadingBarAlpha = 0.0
-    end
-
-    -- Key selector completamente desactivado para evitar el rectángulo encima de la carga.
-    Menu.KeySelectorAlpha = 0.0
-    Menu.SelectingKey = false
-    Menu.SelectingBind = false
-
-    if Menu.ShowKeybinds then Menu.KeybindsInterfaceAlpha = math.min(1, Menu.KeybindsInterfaceAlpha + anim)
-    else Menu.KeybindsInterfaceAlpha = math.max(0, Menu.KeybindsInterfaceAlpha - anim) end
-
-    Susano.BeginFrame()
-
-    if Menu.KeybindsInterfaceAlpha > 0 then Menu.DrawKeybindsInterface(Menu.KeybindsInterfaceAlpha) end
-
-    if Menu.Visible and Menu.LoadingComplete then
-        if Menu.EditorMode and Susano.EnableOverlay then Susano.EnableOverlay(true)
-        elseif not Menu.EditorMode and Susano.EnableOverlay then Susano.EnableOverlay(false) end
-        Menu.DrawBackground()
-        Menu.DrawHeader()
-        Menu.DrawCategories()
-        Menu.DrawFooter()
-        Menu.DrawAnticheatPanel()
-        if Menu.DrawPlayerInfoPanel then Menu.DrawPlayerInfoPanel() end
-    end
-
-    if Menu.InputOpen then Menu.DrawInputWindow() end
-    if Menu.IsLoading and Menu.LoadingBarAlpha > 0 then Menu.DrawLoadingBar(Menu.LoadingBarAlpha) end
-    if Susano.SubmitFrame then Susano.SubmitFrame() end
-
-    if not Menu.Visible and not Menu.ShowKeybinds and not Menu.IsLoading then
-        if Susano.ResetFrame and not Menu.PreventResetFrame then Susano.ResetFrame() end
-    end
-end
-
-
--- Compatibilidad con loaders que esperan Menu.OnRender.
--- No cambia el loader: solo expone el render/input de la librería por el nombre estándar.
-Menu.OnRender = function()
-    if Menu.Render then Menu.Render() end
-    if Menu.LoadingComplete and Menu.HandleInput then Menu.HandleInput() end
-end
 
 return Menu
