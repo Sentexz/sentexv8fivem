@@ -37,6 +37,7 @@ Menu.SelectingKey = false -- selector inicial eliminado
 Menu.MenuToggleKey = 0x22 -- PG DN / Page Down
 Menu.MenuToggleKeyName = "PG DN"
 Menu.MenuToggleControl = 11
+Menu.PreventResetFrame = true
 
 Menu.SelectingBind = false
 Menu.BindingItem = nil
@@ -932,12 +933,20 @@ end
 -- Susano/FiveM: Page Down no siempre entra bien por VK 0x22 con GetAsyncKeyState.
 -- En el menú viejo funcionaba así: IsDisabledControlJustReleased(0, 11).
 function Menu.IsMenuToggleJustReleased()
-    if IsDisabledControlJustReleased then
-        return IsDisabledControlJustReleased(0, 11) == true
-    end
-    return Menu.IsKeyJustPressed(Menu.MenuToggleKey or 0x22)
-end
+    -- Page Down / PG DN en FiveM suele ser control 11.
+    -- Lo comprobamos por varias rutas porque Susano puede ejecutar con controles normales, disabled o VK.
+    local control = Menu.MenuToggleControl or 11
 
+    if IsDisabledControlJustReleased and IsDisabledControlJustReleased(0, control) then return true end
+    if IsControlJustReleased and IsControlJustReleased(0, control) then return true end
+    if IsDisabledControlJustPressed and IsDisabledControlJustPressed(0, control) then return true end
+    if IsControlJustPressed and IsControlJustPressed(0, control) then return true end
+
+    -- Fallback por VK por si la build de Susano no expone controles de FiveM.
+    if Menu.IsKeyJustPressed and Menu.IsKeyJustPressed(Menu.MenuToggleKey or 0x22) then return true end
+
+    return false
+end
 function Menu.HandleInput()
     if Menu.IsLoading or not Menu.LoadingComplete then return end
     if Menu.InputOpen then return end
@@ -1008,7 +1017,7 @@ function Menu.HandleInput()
         else
             if PlaySoundFrontend then PlaySoundFrontend(-1, "BACK", "HUD_FRONTEND_DEFAULT_SOUNDSET", true) end
             if not Menu.ShowKeybinds then
-                if Susano.ResetFrame then Susano.ResetFrame() end
+                if Susano.ResetFrame and not Menu.PreventResetFrame then Susano.ResetFrame() end
             end
         end
     end
@@ -1298,10 +1307,9 @@ function Menu.Render()
     if Menu.InputOpen then Menu.DrawInputWindow() end
     if Menu.LoadingBarAlpha > 0 then Menu.DrawLoadingBar(Menu.LoadingBarAlpha) end
     if Menu.KeySelectorAlpha > 0 then Menu.DrawKeySelector(Menu.KeySelectorAlpha) end
-    if Menu.OnRender then pcall(Menu.OnRender) end
     if Susano.SubmitFrame then Susano.SubmitFrame() end
     if not Menu.Visible and not Menu.ShowKeybinds and Menu.LoadingBarAlpha<=0 and Menu.KeySelectorAlpha<=0 then
-        if Susano.ResetFrame then Susano.ResetFrame() end
+        if Susano.ResetFrame and not Menu.PreventResetFrame then Susano.ResetFrame() end
     end
 end
 
@@ -1561,32 +1569,10 @@ function Menu.Render()
 
     if Menu.InputOpen then Menu.DrawInputWindow() end
     if Menu.IsLoading and Menu.LoadingBarAlpha > 0 then Menu.DrawLoadingBar(Menu.LoadingBarAlpha) end
-    if Menu.OnRender then pcall(Menu.OnRender) end
     if Susano.SubmitFrame then Susano.SubmitFrame() end
 
     if not Menu.Visible and not Menu.ShowKeybinds and not Menu.IsLoading then
-        if Susano.ResetFrame then Susano.ResetFrame() end
-    end
-end
-
-Menu.PreventResetFrame = true
-
-Menu.OpenKeyControl = 11 -- PAGE DOWN
-
-Menu.OnRender = function()
-    if Menu.Render then
-        Menu.Render()
-    end
-
-    if Menu.LoadingComplete and not Menu.IsLoading then
-        if IsDisabledControlJustReleased(0, Menu.OpenKeyControl)
-        or IsControlJustReleased(0, Menu.OpenKeyControl) then
-            Menu.Visible = not Menu.Visible
-        end
-
-        if Menu.HandleInput then
-            Menu.HandleInput()
-        end
+        if Susano.ResetFrame and not Menu.PreventResetFrame then Susano.ResetFrame() end
     end
 end
 
