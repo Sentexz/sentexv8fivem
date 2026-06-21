@@ -1,6 +1,5 @@
 local Menu = {}
-print("[Library] N_TOGGLE_FIXED loaded - Susano key 0x4E")
-print("[Library] PLAYERINFO_TIGHT_RIGHT_SAFE_LOADED")
+print("[Library] N_TOGGLE_FIXED_CATEGORIES_RESTORED loaded - Susano key 0x4E")
 
 local function SafeTable(value)
     return type(value) == "table" and value or {}
@@ -16,7 +15,6 @@ local function SafeIpairs(value)
 end
 
 Menu.Visible = false
-Menu.Categories = Menu.Categories or { { name = "MENU PRINCIPAL" } }
 Menu.PreventResetFrame = true
 Menu.MenuToggleKey = 0x4E -- N (Susano VK)
 Menu.BuildVersion = "Build v8.0.1"
@@ -71,7 +69,6 @@ Menu.TempPressedKey = nil
 
 Menu.ShowKeybinds = false
 Menu.CurrentTopTab = 1
-Menu.Categories = Menu.Categories or {{ name = "MENU PRINCIPAL", icon = "⚡" }}
 
 -- Panel de anticheat (opcional)
 Menu.AnticheatList = {}
