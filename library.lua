@@ -99,7 +99,7 @@ end
 
 -- Dimensiones con bordes delgados
 Menu.Position = {
-    x = 45,
+    x = 55,
     y = 80,
     width = 360,
     itemHeight = 34,
@@ -559,6 +559,7 @@ end
 
 -- Menú principal y submenús
 function Menu.DrawCategories()
+    if type(Menu.Categories) ~= "table" then return end
     if Menu.OpenedCategory then
         local cat = Menu.Categories[Menu.OpenedCategory]
         if not cat or not cat.hasTabs or not cat.tabs then
@@ -825,6 +826,7 @@ end
 -- Panel de teclas rápidas (lateral)
 function Menu.DrawKeybindsInterface(alpha)
     if alpha <= 0 then return end
+    if type(Menu.Categories) ~= "table" then return end
     local binds = {}
     for _,cat in ipairs(Menu.Categories) do
         if cat.hasTabs and cat.tabs then
@@ -999,6 +1001,7 @@ function Menu.HandleInput()
     end
 
     -- Ejecutar keybinds
+    if type(Menu.Categories) == "table" then
     for _,cat in ipairs(Menu.Categories) do
         if cat.hasTabs and cat.tabs then
             for _,tab in ipairs(cat.tabs) do
@@ -1022,6 +1025,7 @@ function Menu.HandleInput()
                 end
             end
         end
+    end
     end
 
     -- Tecla para mostrar/ocultar menú
@@ -1447,7 +1451,7 @@ function Menu.DrawPlayerInfoPanel()
     local y = p.y + p.headerHeight + 10
     local w = 235 * scale
     local bannerH = (Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled) and ((Menu.PlayerInfoBanner.height or 46) * scale) or 0
-    local gap = bannerH > 0 and (-1 * scale) or 0
+    local gap = bannerH > 0 and (-3 * scale) or 0
     local panelH = 132 * scale
     local totalH = bannerH + gap + panelH
     local acR, acG, acB = Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0
