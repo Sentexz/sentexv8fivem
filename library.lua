@@ -24,7 +24,7 @@ Menu.GradientType = 1
 Menu.ScrollbarPosition = 1
 
 Menu.LoadingBarAlpha = 0.0
-Menu.KeySelectorAlpha = 0.0
+Menu.KeySelectorAlpha = 0.0 -- sin selector visual; se deja para compatibilidad interna
 Menu.KeybindsInterfaceAlpha = 0.0
 
 Menu.LoadingProgress = 0.0
@@ -33,10 +33,9 @@ Menu.LoadingComplete = false
 Menu.LoadingStartTime = nil
 Menu.LoadingDuration = 3000
 
-Menu.SelectingKey = false
-Menu.SelectedKey = nil
-Menu.SelectedKeyName = nil
-Menu.TempKeyPressed = nil          -- para mostrar tecla en selector de menú
+Menu.SelectingKey = false -- selector inicial eliminado
+Menu.MenuToggleKey = 0x22 -- PG DN / Page Down
+Menu.MenuToggleKeyName = "PG DN"
 
 Menu.SelectingBind = false
 Menu.BindingItem = nil
@@ -781,9 +780,8 @@ function Menu.DrawKeySelector(alpha)
     Menu.DrawText(x+28, y+24, "SELECCIONA TU KEYBIND", 20, Menu.Colors.Text.r, Menu.Colors.Text.g, Menu.Colors.Text.b, 255*alpha)
     Menu.DrawText(x+29, y+53, "Esta tecla abrirá/cerrará el menú. Pulsa una tecla y confirma con ENTER.", 12, Menu.Colors.TextDim.r, Menu.Colors.TextDim.g, Menu.Colors.TextDim.b, 220*alpha)
 
-    local itemName = Menu.BindingItem and Menu.BindingItem.name or "Abrir menú"
-    local displayKey = Menu.BindingKeyName or Menu.SelectedKeyName or "..."
-    if Menu.SelectingKey and Menu.TempKeyPressed then displayKey = Menu.TempKeyPressed end
+    local itemName = Menu.BindingItem and Menu.BindingItem.name or "Keybind"
+    local displayKey = Menu.BindingKeyName or "..."
     if Menu.SelectingBind and Menu.TempPressedKey then displayKey = Menu.TempPressedKey end
 
     Menu.DrawRoundedRect(x+28, y+84, w-56, 70, 18, 22, 38, 220*alpha, 12)
@@ -913,6 +911,10 @@ Menu.KeyNames = {
 }
 function Menu.GetKeyName(k) return Menu.KeyNames[k] or ("0x"..string.format("%02X",k)) end
 
+function Menu.GetMenuToggleKeyName()
+    return Menu.MenuToggleKeyName or Menu.GetKeyName(Menu.MenuToggleKey or 0x22)
+end
+
 function Menu.HandleInput()
     if Menu.IsLoading or not Menu.LoadingComplete then return end
     if Menu.InputOpen then return end
@@ -940,25 +942,7 @@ function Menu.HandleInput()
         return
     end
 
-    -- Selección de tecla para abrir menú
-    if Menu.SelectingKey then
-        if Menu.IsKeyJustPressed(0x0D) then
-            if Menu.SelectedKey then
-                Menu.SelectingKey = false
-                Menu.TempKeyPressed = nil
-            end
-            return
-        end
-        for _,k in ipairs(captureKeys) do
-            if k ~= 0x0D and Menu.IsKeyJustPressed(k) then
-                Menu.SelectedKey = k
-                Menu.SelectedKeyName = Menu.GetKeyName(k)
-                Menu.TempKeyPressed = Menu.SelectedKeyName
-                break
-            end
-        end
-        return
-    end
+    -- Selector de tecla inicial eliminado: el menú abre/cierra con PG DN.
 
     -- Ejecutar keybinds
     for _,cat in ipairs(Menu.Categories) do
@@ -987,7 +971,7 @@ function Menu.HandleInput()
     end
 
     -- Tecla para mostrar/ocultar menú
-    local toggleKey = Menu.SelectedKey or 0x31
+    local toggleKey = Menu.MenuToggleKey or 0x22 -- PG DN / Page Down
     if Menu.IsKeyJustPressed(toggleKey) then
         Menu.Visible = not Menu.Visible
         if not Menu.Visible and not Menu.ShowKeybinds then
@@ -1154,10 +1138,10 @@ function Menu.HandleInput()
                         if item.onClick then item.onClick(item.value) end
                     elseif item.type == "action" then
                         if item.name == "Cambiar tecla de menú" then
-                            Menu.SelectingKey = true
-                            Menu.TempKeyPressed = nil
+                            -- Selector eliminado. Tecla fija: PG DN / Page Down.
+                        else
+                            if item.onClick then item.onClick() end
                         end
-                        if item.onClick then item.onClick() end
                     elseif item.type == "selector" then
                         if item.onClick then item.onClick(item.selected, item.options[item.selected]) end
                     end
@@ -1265,7 +1249,7 @@ function Menu.Render()
     else
         Menu.LoadingBarAlpha = math.max(0, Menu.LoadingBarAlpha - anim)
     end
-    if Menu.SelectingKey or Menu.SelectingBind then
+    if Menu.SelectingBind then
         Menu.KeySelectorAlpha = math.min(1, Menu.KeySelectorAlpha + anim)
     else
         Menu.KeySelectorAlpha = math.max(0, Menu.KeySelectorAlpha - anim)
@@ -1361,7 +1345,7 @@ CreateThread(function()
             Menu.LoadingProgress = 100
             Menu.IsLoading = false
             Menu.LoadingComplete = true
-            Menu.SelectingKey = true
+            Menu.SelectingKey = false
             break
         end
         Wait(0)
@@ -1485,7 +1469,7 @@ function Menu.Render()
     if Menu.IsLoading then Menu.LoadingBarAlpha = math.min(1, Menu.LoadingBarAlpha + anim)
     else Menu.LoadingBarAlpha = math.max(0, Menu.LoadingBarAlpha - anim) end
 
-    if Menu.SelectingKey or Menu.SelectingBind then Menu.KeySelectorAlpha = math.min(1, Menu.KeySelectorAlpha + anim)
+    if Menu.SelectingBind then Menu.KeySelectorAlpha = math.min(1, Menu.KeySelectorAlpha + anim)
     else Menu.KeySelectorAlpha = math.max(0, Menu.KeySelectorAlpha - anim) end
 
     if Menu.ShowKeybinds then Menu.KeybindsInterfaceAlpha = math.min(1, Menu.KeybindsInterfaceAlpha + anim)
@@ -1495,7 +1479,7 @@ function Menu.Render()
 
     if Menu.KeybindsInterfaceAlpha > 0 then Menu.DrawKeybindsInterface(Menu.KeybindsInterfaceAlpha) end
 
-    if Menu.Visible and Menu.LoadingComplete and not Menu.SelectingKey then
+    if Menu.Visible and Menu.LoadingComplete then
         if Menu.EditorMode and Susano.EnableOverlay then Susano.EnableOverlay(true)
         elseif not Menu.EditorMode and Susano.EnableOverlay then Susano.EnableOverlay(false) end
         Menu.DrawBackground()
