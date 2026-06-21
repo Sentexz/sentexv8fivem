@@ -92,6 +92,9 @@ function Menu.ApplyTheme(themeName)
     if Menu.Banner.enabled and Menu.Banner.imageUrl then
         Menu.LoadBannerTexture(Menu.Banner.imageUrl)
     end
+    if Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled and Menu.PlayerInfoBanner.imageUrl then
+        Menu.LoadPlayerInfoBannerTexture(Menu.PlayerInfoBanner.imageUrl)
+    end
 end
 
 -- Dimensiones con bordes delgados
@@ -1274,6 +1277,15 @@ Menu.bannerTexture = nil
 Menu.bannerWidth = 0
 Menu.bannerHeight = 0
 
+Menu.PlayerInfoBanner = {
+    enabled = true,
+    imageUrl = "https://i.imgur.com/Zqt1mHg.jpeg",
+    height = 46
+}
+Menu.playerInfoBannerTexture = nil
+Menu.playerInfoBannerWidth = 0
+Menu.playerInfoBannerHeight = 0
+
 function Menu.LoadBannerTexture(url)
     if not url or url == "" then return end
     if not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
@@ -1285,6 +1297,22 @@ function Menu.LoadBannerTexture(url)
                 Menu.bannerTexture = tex
                 Menu.bannerWidth = w
                 Menu.bannerHeight = h
+            end
+        end
+    end)
+end
+
+function Menu.LoadPlayerInfoBannerTexture(url)
+    if not url or url == "" then return end
+    if not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
+    CreateThread(function()
+        local status, body = Susano.HttpGet(url)
+        if status == 200 and body and #body > 0 then
+            local tex, w, h = Susano.LoadTextureFromBuffer(body)
+            if tex and tex ~= 0 then
+                Menu.playerInfoBannerTexture = tex
+                Menu.playerInfoBannerWidth = w
+                Menu.playerInfoBannerHeight = h
             end
         end
     end)
@@ -1414,23 +1442,46 @@ function Menu.DrawPlayerInfoPanel()
     if not info or alpha <= 0 then return end
 
     local p = Menu.GetScaledPosition()
+    local scale = Menu.Scale or 1.0
     local x = p.x + p.width + 12
     local y = p.y + p.headerHeight + 10
-    local w = 235 * (Menu.Scale or 1.0)
-    local h = 132 * (Menu.Scale or 1.0)
+    local w = 235 * scale
+    local bannerH = (Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled) and ((Menu.PlayerInfoBanner.height or 46) * scale) or 0
+    local gap = bannerH > 0 and (6 * scale) or 0
+    local panelH = 132 * scale
+    local totalH = bannerH + gap + panelH
     local acR, acG, acB = Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0
 
-    Menu.DrawRoundedRect(x, y, w, h, 0,0,0, 185*alpha, 8)
-    Menu.DrawRoundedRect(x+2, y+2, w-4, h-4, 8,12,20, 160*alpha, 7)
-    Menu.DrawRect(x, y, w, 1, acR, acG, acB, 180*alpha)
-    Menu.DrawRect(x, y+h-1, w, 1, acR, acG, acB, 60*alpha)
+    -- Banner superior "Player Info", cargado igual que el banner principal.
+    if bannerH > 0 then
+        if Menu.playerInfoBannerTexture and Menu.playerInfoBannerTexture > 0 and Susano.DrawImage then
+            Susano.DrawImage(Menu.playerInfoBannerTexture, x, y, w, bannerH, 1, 1, 1, 1.0 * alpha, 0)
+        else
+            Menu.DrawRoundedRect(x, y, w, bannerH, 0,0,0, 185*alpha, 7)
+            Menu.DrawRoundedRect(x+2, y+2, w-4, bannerH-4, 8,12,20, 150*alpha, 6)
+            Menu.DrawRect(x, y+bannerH-1, w, 1, acR, acG, acB, 160*alpha)
+            local title = "PLAYER INFO"
+            local fs = 16
+            local tw = Susano.GetTextWidth and Susano.GetTextWidth(title, fs) or (string.len(title)*8)
+            Menu.DrawText(x+w/2-tw/2, y+bannerH/2-fs/2, title, fs, acR, acG, acB, 255*alpha)
+        end
+    end
 
-    Menu.DrawText(x+14, y+12, "INFO JUGADOR", 12, acR, acG, acB, 255*alpha)
-    Menu.DrawText(x+14, y+34, info.name, 16, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255*alpha)
+    local panelY = y + bannerH + gap
+    Menu.DrawRoundedRect(x, panelY, w, panelH, 0,0,0, 185*alpha, 8)
+    Menu.DrawRoundedRect(x+2, panelY+2, w-4, panelH-4, 8,12,20, 160*alpha, 7)
+    Menu.DrawRect(x, panelY, w, 1, acR, acG, acB, 180*alpha)
+    Menu.DrawRect(x, panelY+panelH-1, w, 1, acR, acG, acB, 60*alpha)
 
-    local lineY = y + 60
+    Menu.DrawText(x+14, panelY+12, info.name, 16, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255*alpha)
+
+    local lineY = panelY + 42
     Menu.DrawText(x+14, lineY, "ID servidor", 11, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 220*alpha)
     Menu.DrawText(x+w-55, lineY, tostring(info.serverId), 12, 1,1,1, 255*alpha)
+
+    lineY = lineY + 22
+    Menu.DrawText(x+14, lineY, "ID local", 11, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 220*alpha)
+    Menu.DrawText(x+w-55, lineY, tostring(info.localId), 12, 1,1,1, 255*alpha)
 
     lineY = lineY + 22
     Menu.DrawText(x+14, lineY, "Distancia", 11, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 220*alpha)
@@ -1568,6 +1619,9 @@ CreateThread(function()
 end)
 
 if Menu.Banner.enabled and Menu.Banner.imageUrl then Menu.LoadBannerTexture(Menu.Banner.imageUrl) end
+if Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled and Menu.PlayerInfoBanner.imageUrl then
+    Menu.LoadPlayerInfoBannerTexture(Menu.PlayerInfoBanner.imageUrl)
+end
 Menu.ApplyTheme("BlackGlass")
 
 -- Valores por defecto (fondo negro ya está, nieve activada)
