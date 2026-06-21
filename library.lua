@@ -1,15 +1,22 @@
 local Menu = {}
-print("[Library] FORCE_SAFE_CATEGORIES loaded - PlayerInfo banner fix")
+print("[Library] PLAYERINFO_TIGHT_RIGHT_SAFE_LOADED")
+
+local function SafeTable(value)
+    return type(value) == "table" and value or {}
+end
+
+local function SafeLen(value)
+    return type(value) == "table" and #value or 0
+end
 
 local function SafeIpairs(value)
-    if type(value) == "table" then
-        return ipairs(value)
-    end
+    if type(value) == "table" then return ipairs(value) end
     return function() return nil end
 end
+
 Menu.Visible = false
 Menu.PreventResetFrame = true
-Menu.MenuToggleKey = 0x22 -- PG DN / AV PAG (Susano VK)
+Menu.MenuToggleKey = 0x4E -- N
 Menu.BuildVersion = "Build v8.0.1"
 Menu.CurrentCategory = 2
 Menu.CurrentPage = 1
@@ -51,7 +58,7 @@ Menu.LoadingDuration = 3000
 
 Menu.SelectingKey = false
 Menu.SelectedKey = Menu.MenuToggleKey
-Menu.SelectedKeyName = "Av Pág"
+Menu.SelectedKeyName = "N"
 Menu.TempKeyPressed = nil          -- para mostrar tecla en selector de menú
 
 Menu.SelectingBind = false
@@ -62,10 +69,7 @@ Menu.TempPressedKey = nil
 
 Menu.ShowKeybinds = false
 Menu.CurrentTopTab = 1
-
--- Safe defaults: el loader puede asignar Categories/TopLevelTabs despues.
-Menu.Categories = Menu.Categories or {}
-Menu.TopLevelTabs = Menu.TopLevelTabs or nil
+Menu.Categories = Menu.Categories or {{ name = "MENU PRINCIPAL", icon = "⚡" }}
 
 -- Panel de anticheat (opcional)
 Menu.AnticheatList = {}
@@ -75,7 +79,7 @@ function Menu.SetAnticheatInfo(detectedList)
         return
     end
     Menu.AnticheatList = {}
-    for _, name in SafeIpairs(detectedList) do
+    for _, name in ipairs(detectedList) do
         table.insert(Menu.AnticheatList, { name = name, detected = true })
     end
 end
@@ -111,7 +115,7 @@ end
 
 -- Dimensiones con bordes delgados
 Menu.Position = {
-    x = 55,
+    x = 45,
     y = 80,
     width = 360,
     itemHeight = 34,
@@ -159,11 +163,11 @@ function Menu.GetActualHeight()
     local bannerH = Menu.Banner.enabled and (Menu.Banner.height * scale) or p.headerHeight
     local height = bannerH
     if Menu.OpenedCategory then
-        local cat = Menu.Categories[Menu.OpenedCategory]
+        local cat = SafeTable(Menu.Categories)[Menu.OpenedCategory]
         if cat and cat.hasTabs and cat.tabs then
             local tab = cat.tabs[Menu.CurrentTab]
             if tab and tab.items then
-                local visible = math.min(Menu.ItemsPerPage, #tab.items)
+                local visible = math.min(Menu.ItemsPerPage, SafeLen(tab.items))
                 height = height + p.mainMenuHeight + p.mainMenuSpacing + (visible * p.itemHeight)
             else
                 height = height + p.mainMenuHeight + p.mainMenuSpacing
@@ -172,12 +176,12 @@ function Menu.GetActualHeight()
             height = height + p.mainMenuHeight + p.mainMenuSpacing
         end
     else
-        local totalCats = #(Menu.Categories or {}) - 1
+        local totalCats = math.max(0, SafeLen(Menu.Categories)-1)
         local visibleCats = math.min(Menu.ItemsPerPage, totalCats)
         height = height + p.mainMenuHeight + p.mainMenuSpacing + (visibleCats * p.itemHeight)
     end
     height = height + p.footerSpacing + p.footerHeight
-    if #Menu.AnticheatList > 0 then
+    if SafeLen(Menu.AnticheatList) > 0 then
         height = height + p.anticheatSpacing + p.anticheatPanelHeight
     end
     return height
@@ -313,7 +317,7 @@ function Menu.DrawTabs(category, x, startY, width, tabHeight)
     local scale = Menu.Scale or 1.0
     local numTabs = #category.tabs
     local tabWidth = width / numTabs
-    for i, tab in SafeIpairs(category.tabs) do
+    for i, tab in ipairs(category.tabs) do
         local tabX = x + (i-1)*tabWidth
         local curW = (i==numTabs) and (x+width - tabX) or (tabWidth + 0.5*scale)
         local isSel = (i == Menu.CurrentTab)
@@ -512,18 +516,18 @@ end
 
 -- Panel anticheat (opcional)
 function Menu.DrawAnticheatPanel()
-    if #Menu.AnticheatList == 0 then return end
+    if SafeLen(Menu.AnticheatList) == 0 then return end
     local p = Menu.GetScaledPosition()
     local x = p.x
     local scale = Menu.Scale or 1.0
     local bannerH = Menu.Banner.enabled and (Menu.Banner.height * scale) or p.headerHeight
     local contentHeight = 0
     if Menu.OpenedCategory then
-        local cat = Menu.Categories[Menu.OpenedCategory]
+        local cat = SafeTable(Menu.Categories)[Menu.OpenedCategory]
         if cat and cat.hasTabs and cat.tabs then
             local tab = cat.tabs[Menu.CurrentTab]
             if tab and tab.items then
-                local visible = math.min(Menu.ItemsPerPage, #tab.items)
+                local visible = math.min(Menu.ItemsPerPage, SafeLen(tab.items))
                 contentHeight = bannerH + p.mainMenuHeight + p.mainMenuSpacing + (visible * p.itemHeight)
             else
                 contentHeight = bannerH + p.mainMenuHeight + p.mainMenuSpacing
@@ -532,14 +536,14 @@ function Menu.DrawAnticheatPanel()
             contentHeight = bannerH + p.mainMenuHeight + p.mainMenuSpacing
         end
     else
-        local totalCats = #(Menu.Categories or {}) - 1
+        local totalCats = math.max(0, SafeLen(Menu.Categories)-1)
         local visibleCats = math.min(Menu.ItemsPerPage, totalCats)
         contentHeight = bannerH + p.mainMenuHeight + p.mainMenuSpacing + (visibleCats * p.itemHeight)
     end
     local footerY = p.y + contentHeight + p.footerSpacing
     local y = footerY + p.footerHeight + p.anticheatSpacing
     local w = p.width - 1
-    local perColumn = math.ceil(#Menu.AnticheatList / 2)
+    local perColumn = math.ceil(SafeLen(Menu.AnticheatList) / 2)
     local rows = math.min(perColumn, 5)
     local h = 35 + rows * 20
     p.anticheatPanelHeight = h
@@ -554,7 +558,7 @@ function Menu.DrawAnticheatPanel()
 
     local startListY = y + 24
     local colWidth = (w - 30) / 2
-    local perCol = math.ceil(#Menu.AnticheatList / 2)
+    local perCol = math.ceil(SafeLen(Menu.AnticheatList) / 2)
     for i, ac in SafeIpairs(Menu.AnticheatList) do
         local col = 0
         local row = i - 1
@@ -571,9 +575,8 @@ end
 
 -- Menú principal y submenús
 function Menu.DrawCategories()
-    if type(Menu.Categories) ~= "table" then return end
     if Menu.OpenedCategory then
-        local cat = Menu.Categories[Menu.OpenedCategory]
+        local cat = SafeTable(Menu.Categories)[Menu.OpenedCategory]
         if not cat or not cat.hasTabs or not cat.tabs then
             Menu.OpenedCategory = nil
             return
@@ -592,7 +595,7 @@ function Menu.DrawCategories()
         local curTab = cat.tabs[Menu.CurrentTab]
         if curTab and curTab.items then
             local itemsY = startY + tabH + spacing
-            local total = #curTab.items
+            local total = SafeLen(curTab.items)
             local maxVis = Menu.ItemsPerPage
             if Menu.CurrentItem > Menu.ItemScrollOffset + maxVis then
                 Menu.ItemScrollOffset = Menu.CurrentItem - maxVis
@@ -632,7 +635,7 @@ function Menu.DrawCategories()
     if Menu.TopLevelTabs then
         local tabCount = #Menu.TopLevelTabs
         local tabW = w / tabCount
-        for i, tab in SafeIpairs(Menu.TopLevelTabs) do
+        for i, tab in ipairs(Menu.TopLevelTabs) do
             local tabX = x + (i-1)*tabW
             local isSel = (i == Menu.CurrentTopTab)
             Menu.DrawRect(tabX, startY, tabW, tabH, 0,0,0, Menu.Colors.BgMain.a/255.0 * (isSel and 0 or 0.5))
@@ -676,14 +679,14 @@ function Menu.DrawCategories()
             end
         end
         Menu.DrawRect(x, startY+tabH-2, w, 1, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255)
-        local title = Menu.Categories[1] and Menu.Categories[1].name or "MENÚ PRINCIPAL"
+        local title = SafeTable(Menu.Categories)[1] and SafeTable(Menu.Categories)[1].name or "MENÚ PRINCIPAL"
         local fs = 16
         local tw = Susano.GetTextWidth and Susano.GetTextWidth(title, fs) or (string.len(title)*8)
         Menu.DrawText(x+w/2-tw/2, startY+tabH/2-fs/2, title, fs, 1,1,1, 1.0)
         startY = startY + tabH + spacing
     end
 
-    local totalCats = #(Menu.Categories or {}) - 1
+    local totalCats = math.max(0, SafeLen(Menu.Categories)-1)
     local maxVis = Menu.ItemsPerPage
     if Menu.CurrentCategory > Menu.CategoryScrollOffset + maxVis + 1 then
         Menu.CategoryScrollOffset = Menu.CurrentCategory - maxVis - 1
@@ -694,9 +697,9 @@ function Menu.DrawCategories()
     local visible = 0
     for i=1, math.min(maxVis, totalCats) do
         local idx = i + Menu.CategoryScrollOffset + 1
-        if idx <= #(Menu.Categories or {}) then
+        if idx <= SafeLen(Menu.Categories) then
             visible = visible + 1
-            local cat = Menu.Categories[idx]
+            local cat = SafeTable(Menu.Categories)[idx]
             local yPos = startY + (i-1)*itemH
             local isSel = (idx == Menu.CurrentCategory)
             local fakeItem = { name = cat.name, isSeparator = false }
@@ -716,11 +719,11 @@ function Menu.DrawFooter()
     local bannerH = Menu.Banner.enabled and (Menu.Banner.height * scale) or p.headerHeight
     local totalH = bannerH
     if Menu.OpenedCategory then
-        local cat = Menu.Categories[Menu.OpenedCategory]
+        local cat = SafeTable(Menu.Categories)[Menu.OpenedCategory]
         if cat and cat.hasTabs and cat.tabs then
             local tab = cat.tabs[Menu.CurrentTab]
             if tab and tab.items then
-                local vis = math.min(Menu.ItemsPerPage, #tab.items)
+                local vis = math.min(Menu.ItemsPerPage, SafeLen(tab.items))
                 totalH = totalH + p.mainMenuHeight + p.mainMenuSpacing + (vis * p.itemHeight)
             else
                 totalH = totalH + p.mainMenuHeight + p.mainMenuSpacing
@@ -729,7 +732,7 @@ function Menu.DrawFooter()
             totalH = totalH + p.mainMenuHeight + p.mainMenuSpacing
         end
     else
-        local vis = math.min(Menu.ItemsPerPage, #(Menu.Categories or {})-1)
+        local vis = math.min(Menu.ItemsPerPage, math.max(0, SafeLen(Menu.Categories)-1))
         totalH = totalH + p.mainMenuHeight + p.mainMenuSpacing + (vis * p.itemHeight)
     end
     local footerY = p.y + totalH + p.footerSpacing
@@ -746,15 +749,15 @@ function Menu.DrawFooter()
     Menu.DrawText(x+w-vw-15, footerY+h/2-fs/2, versionText, fs, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 255)
     local page = ""
     if Menu.OpenedCategory then
-        local cat = Menu.Categories[Menu.OpenedCategory]
+        local cat = SafeTable(Menu.Categories)[Menu.OpenedCategory]
         if cat and cat.hasTabs and cat.tabs then
             local tab = cat.tabs[Menu.CurrentTab]
             if tab and tab.items then
-                page = string.format("%d/%d", Menu.CurrentItem, #tab.items)
+                page = string.format("%d/%d", Menu.CurrentItem, SafeLen(tab.items))
             end
         end
     else
-        page = string.format("%d/%d", Menu.CurrentCategory-1, #(Menu.Categories or {})-1)
+        page = string.format("%d/%d", Menu.CurrentCategory-1, math.max(0, SafeLen(Menu.Categories)-1))
     end
     if page ~= "" then
         local pw = Susano.GetTextWidth and Susano.GetTextWidth(page, fs) or (string.len(page)*6)
@@ -838,7 +841,6 @@ end
 -- Panel de teclas rápidas (lateral)
 function Menu.DrawKeybindsInterface(alpha)
     if alpha <= 0 then return end
-    if type(Menu.Categories) ~= "table" then return end
     local binds = {}
     for _,cat in SafeIpairs(Menu.Categories) do
         if cat.hasTabs and cat.tabs then
@@ -863,7 +865,7 @@ function Menu.DrawKeybindsInterface(alpha)
     Menu.DrawRoundedRect(x, y, w, h, 0,0,0, 200*alpha, 6)
     Menu.DrawRect(x, y, w, 1, Menu.Colors.BorderNeon.r/255.0, Menu.Colors.BorderNeon.g/255.0, Menu.Colors.BorderNeon.b/255.0, 150*alpha)
     Menu.DrawText(x+15, y+10, "⚡ TECLAS RÁPIDAS", 12, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255*alpha)
-    for i, bind in SafeIpairs(binds) do
+    for i, bind in ipairs(binds) do
         local lineY = y + 32 + (i-1)*22
         local text = bind.name .. "  [" .. bind.key .. "]"
         if bind.active ~= nil then
@@ -894,7 +896,7 @@ function Menu.DrawBackground()
     -- Fondo negro con 30% opacidad
     Menu.DrawRoundedRect(x, y, w, actualHeight, 0,0,0, Menu.Colors.BgMain.a/255.0, p.headerRadius)
     if Menu.ShowSnowflakes then
-        for _, part in SafeIpairs(Menu.Particles) do
+        for _, part in ipairs(Menu.Particles) do
             part.y = part.y + part.speedY
             part.x = part.x + part.speedX
             if part.y > 1 then part.y = 0; part.x = math.random(0,1000)/1000 end
@@ -981,7 +983,7 @@ function Menu.HandleInput()
             Menu.TempPressedKey = nil
             return
         end
-        for _,k in SafeIpairs(captureKeys) do
+        for _,k in ipairs(captureKeys) do
             if k ~= 0x0D and Menu.IsKeyJustPressed(k) then
                 Menu.BindingKey = k
                 Menu.BindingKeyName = Menu.GetKeyName(k)
@@ -1001,7 +1003,7 @@ function Menu.HandleInput()
             end
             return
         end
-        for _,k in SafeIpairs(captureKeys) do
+        for _,k in ipairs(captureKeys) do
             if k ~= 0x0D and Menu.IsKeyJustPressed(k) then
                 Menu.SelectedKey = k
                 Menu.SelectedKeyName = Menu.GetKeyName(k)
@@ -1013,7 +1015,6 @@ function Menu.HandleInput()
     end
 
     -- Ejecutar keybinds
-    if type(Menu.Categories) == "table" then
     for _,cat in SafeIpairs(Menu.Categories) do
         if cat.hasTabs and cat.tabs then
             for _,tab in SafeIpairs(cat.tabs) do
@@ -1037,7 +1038,6 @@ function Menu.HandleInput()
                 end
             end
         end
-    end
     end
 
     -- Tecla para mostrar/ocultar menú
@@ -1094,7 +1094,7 @@ function Menu.HandleInput()
 
     -- Navegación normal
     if Menu.OpenedCategory then
-        local cat = Menu.Categories[Menu.OpenedCategory]
+        local cat = SafeTable(Menu.Categories)[Menu.OpenedCategory]
         if not cat or not cat.hasTabs or not cat.tabs then
             Menu.OpenedCategory = nil
             return
@@ -1118,13 +1118,13 @@ function Menu.HandleInput()
                         if item.onClick then item.onClick(item.value) end
                     elseif item.type == "selector" then
                         local idx = (item.selected or 1) - 1
-                        if idx < 1 then idx = #item.options end
+                        if idx < 1 then idx = SafeLen(item.options) end
                         item.selected = idx
                         if item.name == "Tema del menú" then Menu.ApplyTheme(item.options[idx]) end
                         if item.onClick then item.onClick(item.selected, item.options[item.selected]) end
                     elseif item.type == "toggle_selector" then
                         local idx = (item.selected or 1) - 1
-                        if idx < 1 then idx = #item.options end
+                        if idx < 1 then idx = SafeLen(item.options) end
                         item.selected = idx
                     elseif item.type == "toggle" and item.hasSlider then
                         item.sliderValue = math.max(item.sliderMin or 0, (item.sliderValue or 0) - (item.sliderStep or 0.1))
@@ -1141,13 +1141,13 @@ function Menu.HandleInput()
                         if item.onClick then item.onClick(item.value) end
                     elseif item.type == "selector" then
                         local idx = (item.selected or 1) + 1
-                        if idx > #item.options then idx = 1 end
+                        if idx > SafeLen(item.options) then idx = 1 end
                         item.selected = idx
                         if item.name == "Tema del menú" then Menu.ApplyTheme(item.options[idx]) end
                         if item.onClick then item.onClick(item.selected, item.options[item.selected]) end
                     elseif item.type == "toggle_selector" then
                         local idx = (item.selected or 1) + 1
-                        if idx > #item.options then idx = 1 end
+                        if idx > SafeLen(item.options) then idx = 1 end
                         item.selected = idx
                     elseif item.type == "toggle" and item.hasSlider then
                         item.sliderValue = math.min(item.sliderMax or 100, (item.sliderValue or 0) + (item.sliderStep or 0.1))
@@ -1169,7 +1169,7 @@ function Menu.HandleInput()
                     Menu.UpdateCategoriesFromTopTab()
                 end
             elseif Menu.IsKeyJustPressed(0x45) then  -- E
-                if Menu.CurrentTab < #cat.tabs then
+                if Menu.CurrentTab < SafeLen(cat.tabs) then
                     Menu.CurrentTab = Menu.CurrentTab + 1
                     local newTab = cat.tabs[Menu.CurrentTab]
                     if newTab and newTab.items then
@@ -1231,10 +1231,10 @@ function Menu.HandleInput()
         -- Menú principal
         if Menu.IsKeyJustPressed(0x26) then  -- Up
             Menu.CurrentCategory = Menu.CurrentCategory - 1
-            if Menu.CurrentCategory < 2 then Menu.CurrentCategory = #(Menu.Categories or {}) end
+            if Menu.CurrentCategory < 2 then Menu.CurrentCategory = SafeLen(Menu.Categories) end
         elseif Menu.IsKeyJustPressed(0x28) then  -- Down
             Menu.CurrentCategory = Menu.CurrentCategory + 1
-            if Menu.CurrentCategory > #(Menu.Categories or {}) then Menu.CurrentCategory = 2 end
+            if Menu.CurrentCategory > SafeLen(Menu.Categories) then Menu.CurrentCategory = 2 end
         elseif Menu.IsKeyJustPressed(0x25) or Menu.IsKeyJustPressed(0x41) then  -- Left / A (cambiar top tab)
             if Menu.TopLevelTabs then
                 Menu.CurrentTopTab = Menu.CurrentTopTab - 1
@@ -1248,7 +1248,7 @@ function Menu.HandleInput()
                 Menu.UpdateCategoriesFromTopTab()
             end
         elseif Menu.IsKeyJustPressed(0x0D) then  -- Enter
-            local cat = Menu.Categories[Menu.CurrentCategory]
+            local cat = SafeTable(Menu.Categories)[Menu.CurrentCategory]
             if cat and cat.hasTabs and cat.tabs then
                 Menu.OpenedCategory = Menu.CurrentCategory
                 Menu.CurrentTab = 1
@@ -1338,7 +1338,7 @@ end
 function Menu.GetCurrentSelectedItem()
     if not Menu.Categories then return nil, nil, nil end
     if Menu.OpenedCategory then
-        local cat = Menu.Categories[Menu.OpenedCategory]
+        local cat = SafeTable(Menu.Categories)[Menu.OpenedCategory]
         if cat and cat.hasTabs and cat.tabs then
             local tab = cat.tabs[Menu.CurrentTab]
             if tab and tab.items then
@@ -1346,7 +1346,7 @@ function Menu.GetCurrentSelectedItem()
             end
         end
     else
-        local cat = Menu.Categories[Menu.CurrentCategory]
+        local cat = SafeTable(Menu.Categories)[Menu.CurrentCategory]
         return cat, cat, nil
     end
     return nil, nil, nil
@@ -1376,10 +1376,10 @@ function Menu.ResolvePlayerFromItem(item)
         Menu.SelectedPlayer
     }
 
-    for _,v in SafeIpairs(candidates) do
+    for _,v in ipairs(candidates) do
         local n = tonumber(v)
         if n then
-            for _,pid in SafeIpairs(GetActivePlayers and GetActivePlayers() or {}) do
+            for _,pid in ipairs(GetActivePlayers and GetActivePlayers() or {}) do
                 if GetPlayerServerId(pid) == n or pid == n then
                     return pid, GetPlayerServerId(pid)
                 end
@@ -1389,13 +1389,13 @@ function Menu.ResolvePlayerFromItem(item)
 
     local targetName = string.lower(_cleanPlayerMenuName(item.name or item.label or item.text or ""))
     if targetName ~= "" and GetActivePlayers then
-        for _,pid in SafeIpairs(GetActivePlayers()) do
+        for _,pid in ipairs(GetActivePlayers()) do
             local pname = GetPlayerName(pid) or ""
             if string.lower(pname) == targetName or string.lower(_cleanPlayerMenuName(pname)) == targetName then
                 return pid, GetPlayerServerId(pid)
             end
         end
-        for _,pid in SafeIpairs(GetActivePlayers()) do
+        for _,pid in ipairs(GetActivePlayers()) do
             local pname = string.lower(GetPlayerName(pid) or "")
             if pname ~= "" and (targetName:find(pname, 1, true) or pname:find(targetName, 1, true)) then
                 return pid, GetPlayerServerId(pid)
@@ -1463,7 +1463,7 @@ function Menu.DrawPlayerInfoPanel()
     local y = p.y + p.headerHeight + 10
     local w = 235 * scale
     local bannerH = (Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled) and ((Menu.PlayerInfoBanner.height or 46) * scale) or 0
-    local gap = bannerH > 0 and (-3 * scale) or 0
+    local gap = bannerH > 0 and (-1 * scale) or 0
     local panelH = 132 * scale
     local totalH = bannerH + gap + panelH
     local acR, acG, acB = Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0
