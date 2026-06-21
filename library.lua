@@ -1,4 +1,11 @@
 local Menu = {}
+
+local function SafeIpairs(value)
+    if type(value) == "table" then
+        return ipairs(value)
+    end
+    return function() return nil end
+end
 Menu.Visible = false
 Menu.PreventResetFrame = true
 Menu.MenuToggleKey = 0x4E -- N
@@ -63,7 +70,7 @@ function Menu.SetAnticheatInfo(detectedList)
         return
     end
     Menu.AnticheatList = {}
-    for _, name in ipairs(detectedList) do
+    for _, name in SafeIpairs(detectedList) do
         table.insert(Menu.AnticheatList, { name = name, detected = true })
     end
 end
@@ -301,7 +308,7 @@ function Menu.DrawTabs(category, x, startY, width, tabHeight)
     local scale = Menu.Scale or 1.0
     local numTabs = #category.tabs
     local tabWidth = width / numTabs
-    for i, tab in ipairs(category.tabs) do
+    for i, tab in SafeIpairs(category.tabs) do
         local tabX = x + (i-1)*tabWidth
         local curW = (i==numTabs) and (x+width - tabX) or (tabWidth + 0.5*scale)
         local isSel = (i == Menu.CurrentTab)
@@ -543,7 +550,7 @@ function Menu.DrawAnticheatPanel()
     local startListY = y + 24
     local colWidth = (w - 30) / 2
     local perCol = math.ceil(#Menu.AnticheatList / 2)
-    for i, ac in ipairs(Menu.AnticheatList) do
+    for i, ac in SafeIpairs(Menu.AnticheatList) do
         local col = 0
         local row = i - 1
         if i > perCol then
@@ -598,7 +605,7 @@ function Menu.DrawCategories()
                 end
             end
             local nonSep = 0
-            for _,it in ipairs(curTab.items) do if not it.isSeparator then nonSep = nonSep+1 end end
+            for _,it in SafeIpairs(curTab.items) do if not it.isSeparator then nonSep = nonSep+1 end end
             if nonSep > 0 then
                 Menu.DrawScrollbar(x, itemsY, visible*itemH, Menu.CurrentItem, nonSep, false, w)
             end
@@ -620,7 +627,7 @@ function Menu.DrawCategories()
     if Menu.TopLevelTabs then
         local tabCount = #Menu.TopLevelTabs
         local tabW = w / tabCount
-        for i, tab in ipairs(Menu.TopLevelTabs) do
+        for i, tab in SafeIpairs(Menu.TopLevelTabs) do
             local tabX = x + (i-1)*tabW
             local isSel = (i == Menu.CurrentTopTab)
             Menu.DrawRect(tabX, startY, tabW, tabH, 0,0,0, Menu.Colors.BgMain.a/255.0 * (isSel and 0 or 0.5))
@@ -828,11 +835,11 @@ function Menu.DrawKeybindsInterface(alpha)
     if alpha <= 0 then return end
     if type(Menu.Categories) ~= "table" then return end
     local binds = {}
-    for _,cat in ipairs(Menu.Categories) do
+    for _,cat in SafeIpairs(Menu.Categories) do
         if cat.hasTabs and cat.tabs then
-            for _,tab in ipairs(cat.tabs) do
+            for _,tab in SafeIpairs(cat.tabs) do
                 if tab.items then
-                    for _,it in ipairs(tab.items) do
+                    for _,it in SafeIpairs(tab.items) do
                         if it.bindKey and it.bindKeyName and (it.type=="toggle" or it.type=="action") then
                             table.insert(binds, {name=it.name, key=it.bindKeyName, active=it.type=="toggle" and it.value})
                         end
@@ -851,7 +858,7 @@ function Menu.DrawKeybindsInterface(alpha)
     Menu.DrawRoundedRect(x, y, w, h, 0,0,0, 200*alpha, 6)
     Menu.DrawRect(x, y, w, 1, Menu.Colors.BorderNeon.r/255.0, Menu.Colors.BorderNeon.g/255.0, Menu.Colors.BorderNeon.b/255.0, 150*alpha)
     Menu.DrawText(x+15, y+10, "⚡ TECLAS RÁPIDAS", 12, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255*alpha)
-    for i, bind in ipairs(binds) do
+    for i, bind in SafeIpairs(binds) do
         local lineY = y + 32 + (i-1)*22
         local text = bind.name .. "  [" .. bind.key .. "]"
         if bind.active ~= nil then
@@ -882,7 +889,7 @@ function Menu.DrawBackground()
     -- Fondo negro con 30% opacidad
     Menu.DrawRoundedRect(x, y, w, actualHeight, 0,0,0, Menu.Colors.BgMain.a/255.0, p.headerRadius)
     if Menu.ShowSnowflakes then
-        for _, part in ipairs(Menu.Particles) do
+        for _, part in SafeIpairs(Menu.Particles) do
             part.y = part.y + part.speedY
             part.x = part.x + part.speedX
             if part.y > 1 then part.y = 0; part.x = math.random(0,1000)/1000 end
@@ -969,7 +976,7 @@ function Menu.HandleInput()
             Menu.TempPressedKey = nil
             return
         end
-        for _,k in ipairs(captureKeys) do
+        for _,k in SafeIpairs(captureKeys) do
             if k ~= 0x0D and Menu.IsKeyJustPressed(k) then
                 Menu.BindingKey = k
                 Menu.BindingKeyName = Menu.GetKeyName(k)
@@ -989,7 +996,7 @@ function Menu.HandleInput()
             end
             return
         end
-        for _,k in ipairs(captureKeys) do
+        for _,k in SafeIpairs(captureKeys) do
             if k ~= 0x0D and Menu.IsKeyJustPressed(k) then
                 Menu.SelectedKey = k
                 Menu.SelectedKeyName = Menu.GetKeyName(k)
@@ -1002,11 +1009,11 @@ function Menu.HandleInput()
 
     -- Ejecutar keybinds
     if type(Menu.Categories) == "table" then
-    for _,cat in ipairs(Menu.Categories) do
+    for _,cat in SafeIpairs(Menu.Categories) do
         if cat.hasTabs and cat.tabs then
-            for _,tab in ipairs(cat.tabs) do
+            for _,tab in SafeIpairs(cat.tabs) do
                 if tab.items then
-                    for _,it in ipairs(tab.items) do
+                    for _,it in SafeIpairs(tab.items) do
                         if it.bindKey and (it.type=="toggle" or it.type=="action") then
                             if Menu.IsKeyJustPressed(it.bindKey) then
                                 if it.type=="toggle" then
@@ -1258,7 +1265,7 @@ function Menu.UpdateCategoriesFromTopTab()
     if not currentTop then return end
     Menu.Categories = {}
     table.insert(Menu.Categories, { name = currentTop.name })
-    for _, cat in ipairs(currentTop.categories) do
+    for _, cat in SafeIpairs(currentTop.categories) do
         table.insert(Menu.Categories, cat)
     end
     Menu.CurrentCategory = 2
@@ -1364,10 +1371,10 @@ function Menu.ResolvePlayerFromItem(item)
         Menu.SelectedPlayer
     }
 
-    for _,v in ipairs(candidates) do
+    for _,v in SafeIpairs(candidates) do
         local n = tonumber(v)
         if n then
-            for _,pid in ipairs(GetActivePlayers and GetActivePlayers() or {}) do
+            for _,pid in SafeIpairs(GetActivePlayers and GetActivePlayers() or {}) do
                 if GetPlayerServerId(pid) == n or pid == n then
                     return pid, GetPlayerServerId(pid)
                 end
@@ -1377,13 +1384,13 @@ function Menu.ResolvePlayerFromItem(item)
 
     local targetName = string.lower(_cleanPlayerMenuName(item.name or item.label or item.text or ""))
     if targetName ~= "" and GetActivePlayers then
-        for _,pid in ipairs(GetActivePlayers()) do
+        for _,pid in SafeIpairs(GetActivePlayers()) do
             local pname = GetPlayerName(pid) or ""
             if string.lower(pname) == targetName or string.lower(_cleanPlayerMenuName(pname)) == targetName then
                 return pid, GetPlayerServerId(pid)
             end
         end
-        for _,pid in ipairs(GetActivePlayers()) do
+        for _,pid in SafeIpairs(GetActivePlayers()) do
             local pname = string.lower(GetPlayerName(pid) or "")
             if pname ~= "" and (targetName:find(pname, 1, true) or pname:find(targetName, 1, true)) then
                 return pid, GetPlayerServerId(pid)
@@ -1632,11 +1639,11 @@ Menu.ApplyTheme("BlackGlass")
 CreateThread(function()
     while not Menu.Categories do Wait(100) end
     Wait(500)
-    for _,cat in ipairs(Menu.Categories) do
+    for _,cat in SafeIpairs(Menu.Categories) do
         if cat.name == "Ajustes" and cat.tabs then
-            for _,tab in ipairs(cat.tabs) do
+            for _,tab in SafeIpairs(cat.tabs) do
                 if tab.name == "General" and tab.items then
-                    for _,it in ipairs(tab.items) do
+                    for _,it in SafeIpairs(tab.items) do
                         if it.name == "Fondo negro" and it.type == "toggle" then
                             it.value = true   -- ahora el fondo ya es negro, no hace falta este toggle, pero lo dejamos
                         end
