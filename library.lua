@@ -1,4 +1,5 @@
 local Menu = {}
+print("[Library] FORCE_SAFE_NO_IPAIRS loaded - PlayerInfo banner fix")
 
 local function SafeIpairs(value)
     if type(value) == "table" then
@@ -8,7 +9,7 @@ local function SafeIpairs(value)
 end
 Menu.Visible = false
 Menu.PreventResetFrame = true
-Menu.MenuToggleKey = 0x4E -- N
+Menu.MenuToggleKey = 0x22 -- PG DN / AV PAG (Susano VK)
 Menu.BuildVersion = "Build v8.0.1"
 Menu.CurrentCategory = 2
 Menu.CurrentPage = 1
@@ -50,7 +51,7 @@ Menu.LoadingDuration = 3000
 
 Menu.SelectingKey = false
 Menu.SelectedKey = Menu.MenuToggleKey
-Menu.SelectedKeyName = "N"
+Menu.SelectedKeyName = "Av Pág"
 Menu.TempKeyPressed = nil          -- para mostrar tecla en selector de menú
 
 Menu.SelectingBind = false
