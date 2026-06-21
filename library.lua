@@ -1,5 +1,5 @@
 local Menu = {}
-print("[Library] SENTEX_SMOOTH_COMPACT_COLOR_PLAYERINFO loaded - Susano key 0x4E")
+print("[Library] SENTEX_READABLE_MOUSE_THEME_PLAYERINFO_PRO loaded - Susano key 0x4E")
 
 local function SafeTable(value)
     return type(value) == "table" and value or {}
@@ -84,6 +84,46 @@ Menu.TempPressedKey = nil
 
 Menu.ShowKeybinds = false
 Menu.CurrentTopTab = 1
+
+-- Interacción segura del menú: muestra el cursor del overlay y bloquea
+-- controles del juego mientras el menú está abierto. La navegación del
+-- menú sigue funcionando porque usa Susano.GetAsyncKeyState.
+Menu.BlockGameControlsWhileOpen = true
+Menu.UnlockMouseWhileOpen = true
+Menu._InteractionLockActive = false
+Menu._CursorCenteredForOpen = false
+
+function Menu.UpdateMenuInteractionLock()
+    local active = Menu.Visible and Menu.LoadingComplete and not Menu.IsLoading
+
+    if active then
+        if Menu.UnlockMouseWhileOpen and Susano then
+            if Susano.EnableOverlay then pcall(Susano.EnableOverlay, true) end
+            if Susano.SetCursorVisible then pcall(Susano.SetCursorVisible, true) end
+            if Susano.ShowCursor then pcall(Susano.ShowCursor, true) end
+        end
+
+        if not Menu._CursorCenteredForOpen and SetCursorLocation then
+            pcall(SetCursorLocation, 0.5, 0.5)
+            Menu._CursorCenteredForOpen = true
+        end
+
+        if Menu.BlockGameControlsWhileOpen and DisableAllControlActions then
+            pcall(DisableAllControlActions, 0)
+            pcall(DisableAllControlActions, 1)
+            pcall(DisableAllControlActions, 2)
+        end
+    else
+        Menu._CursorCenteredForOpen = false
+        if Menu._InteractionLockActive and Susano then
+            if Susano.EnableOverlay then pcall(Susano.EnableOverlay, false) end
+            if Susano.SetCursorVisible then pcall(Susano.SetCursorVisible, false) end
+            if Susano.ShowCursor then pcall(Susano.ShowCursor, false) end
+        end
+    end
+
+    Menu._InteractionLockActive = active
+end
 
 -- Panel de anticheat (opcional)
 Menu.AnticheatList = {}
@@ -405,7 +445,7 @@ function Menu.DrawTabs(category, x, startY, width, tabHeight)
         local tabX = x + (i - 1) * tabWidth
         local currentW = i == numTabs and (x + width - tabX) or tabWidth
         local isSelected = i == selectedIndex
-        local fontSize = 13
+        local fontSize = 15
         local name = tostring(tab.name or "")
         local tw = Susano.GetTextWidth and Susano.GetTextWidth(name, fontSize) or (#name * 7)
         local tx = tabX + currentW / 2 - tw / 2
@@ -436,7 +476,7 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected, isCategory
     if item.isSeparator then
         Menu.DrawRect(x, itemY, width, itemHeight, 0,0,0, Menu.Colors.BgMain.a/255.0 * 0.3)
         if item.separatorText then
-            local fs = 11
+            local fs = 12
             local tw = Susano.GetTextWidth and Susano.GetTextWidth(item.separatorText, fs) or (string.len(item.separatorText)*7)
             local tx = x + width/2 - tw/2
             local ty = itemY + itemHeight/2 - fs/2
@@ -485,15 +525,15 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected, isCategory
         Menu.DrawRect(x, drawY+itemHeight-1, width, 1, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255)
         Menu.DrawRect(x, drawY, 2, itemHeight, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255)
         Menu.DrawRect(x+width-2, drawY, 2, itemHeight, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 200)
-        Menu.DrawText(x+15+1, itemY+itemHeight/2-7+1, item.name, 14, 0,0,0, 145)
+        Menu.DrawText(x+15+1, itemY+itemHeight/2-8+1, item.name, 16, 0,0,0, 155)
     end
 
     local textX = x + 16
-    local textY = itemY + itemHeight/2 - 7
-    Menu.DrawText(textX, textY, item.name, 14, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255)
+    local textY = itemY + itemHeight/2 - 8
+    Menu.DrawText(textX, textY, item.name, 16, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255)
     
     if isCategory then
-        Menu.DrawText(x+width-25, textY, "›", 15, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 200)
+        Menu.DrawText(x+width-25, textY-1, "›", 17, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 200)
     end
 
     if not isCategory then
@@ -552,7 +592,7 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected, isCategory
             local selIdx = item.selected or 1
             local opt = item.options[selIdx] or ""
             local full = "< " .. opt .. " >"
-            local fs = 12
+            local fs = 14
             local tw = Susano.GetTextWidth and Susano.GetTextWidth(full, fs) or (string.len(full)*8)
             local tx = x + width - tw - 16
             Menu.DrawText(tx, textY, full, fs, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 255)
@@ -575,7 +615,7 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected, isCategory
                 local selIdx = item.selected or 1
                 local opt = item.options[selIdx] or ""
                 local optText = "< " .. opt .. " >"
-                local fs = 11
+                local fs = 12
                 local tw = Susano.GetTextWidth and Susano.GetTextWidth(optText, fs) or (string.len(optText)*7)
                 local tx = toggleX - tw - 12
                 Menu.DrawText(tx, textY, optText, fs, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 255)
@@ -730,7 +770,7 @@ function Menu.DrawCategories()
             local tabX = x + (i - 1) * tabW
             local currentW = i == tabCount and (x + w - tabX) or tabW
             local isSelected = i == selectedTop
-            local fs = 13
+            local fs = 15
             local name = tostring(tab.name or "")
             local tw = Susano.GetTextWidth and Susano.GetTextWidth(name, fs) or (#name * 7)
             local tx = tabX + currentW / 2 - tw / 2
@@ -819,7 +859,7 @@ function Menu.DrawFooter()
     Menu.DrawRoundedRect(x, footerY, w, h, 0,0,0, Menu.Colors.BgMain.a/255.0, p.footerRadius)
     Menu.DrawRect(x, footerY, w, 1, Menu.Colors.BorderNeon.r/255.0, Menu.Colors.BorderNeon.g/255.0, Menu.Colors.BorderNeon.b/255.0, 100)
     local text = ".gg/sentexmodz"
-    local fs = 11
+    local fs = 12
     local tw = Susano.GetTextWidth and Susano.GetTextWidth(text, fs) or (string.len(text)*6)
     Menu.DrawText(x+15, footerY+h/2-fs/2, text, fs, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 255)
     local versionText = Menu.BuildVersion or "Build v8.0.1"
@@ -1587,20 +1627,30 @@ local function _DrawTextShadow(x, y, text, size, r, g, b, alpha)
     Menu.DrawText(x, y, text, size, r, g, b, 255 * alpha)
 end
 
-local function _DrawCleanInfoLine(x, y, w, label, value, valueR, valueG, valueB, alpha)
-    local labelSize = 12
-    local valueSize = 13
+local function _DrawPlayerInfoRow(x, y, w, h, label, value, valueR, valueG, valueB, alpha)
+    local acR = Menu.Colors.Accent.r / 255.0
+    local acG = Menu.Colors.Accent.g / 255.0
+    local acB = Menu.Colors.Accent.b / 255.0
+
+    -- Fila de cristal muy sutil. No crea un segundo panel visual.
+    Menu.DrawRoundedRect(x, y, w, h, 255, 255, 255, 10 * alpha, 4)
+    Menu.DrawRect(x, y + h - 1, w, 1, 255, 255, 255, 12 * alpha)
+    Menu.DrawRoundedRect(x + 8, y + h / 2 - 2, 4, 4, acR, acG, acB, 205 * alpha, 2)
+
+    local labelSize = 13
+    local valueSize = 14
     _DrawTextShadow(
-        x, y,
+        x + 20, y + h / 2 - 7,
         label, labelSize,
         Menu.Colors.TextDim.r / 255.0,
         Menu.Colors.TextDim.g / 255.0,
         Menu.Colors.TextDim.b / 255.0,
         alpha
     )
+
+    value = tostring(value or "-")
     local valueWidth = Susano.GetTextWidth and Susano.GetTextWidth(value, valueSize) or (#value * 7)
-    _DrawTextShadow(x + w - valueWidth, y - 1, value, valueSize, valueR, valueG, valueB, alpha)
-    Menu.DrawRect(x, y + 20, w, 1, 255, 255, 255, 18 * alpha)
+    _DrawTextShadow(x + w - valueWidth - 12, y + h / 2 - 8, value, valueSize, valueR, valueG, valueB, alpha)
 end
 
 function Menu.DrawPlayerInfoPanel()
@@ -1611,75 +1661,87 @@ function Menu.DrawPlayerInfoPanel()
 
     local p = Menu.GetScaledPosition()
     local scale = Menu.Scale or 1.0
-    local x = p.x + p.width + 12 * scale
+    local x = p.x + p.width + 14 * scale
     local mainBannerH = (Menu.Banner and Menu.Banner.enabled and Menu.Banner.height or Menu.Position.headerHeight) * scale
-    local y = p.y + mainBannerH + 7 * scale
-    local w = 286 * scale
-    local bannerH = (Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled) and ((Menu.PlayerInfoBanner.height or 46) * scale) or (38 * scale)
-    local contentH = 158 * scale
-    local totalH = bannerH + contentH
+    local y = p.y + mainBannerH + 8 * scale
+    local w = 304 * scale
+    local bannerH = (Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled) and ((Menu.PlayerInfoBanner.height or 46) * scale) or (42 * scale)
+    local bodyH = 194 * scale
+    local totalH = bannerH + bodyH
 
     local acR = Menu.Colors.Accent.r / 255.0
     local acG = Menu.Colors.Accent.g / 255.0
     local acB = Menu.Colors.Accent.b / 255.0
-    local panelAlpha = math.min(215, (Menu.Colors.BgMain.a or 77) + 105) * alpha
+    local cardAlpha = math.min(220, (Menu.Colors.BgMain.a or 77) + 120) * alpha
 
-    -- Un único contenedor: evita la sensación de dos paneles superpuestos.
-    Menu.DrawRoundedRect(x, y, w, totalH, 0, 0, 0, panelAlpha, 7 * scale)
-    Menu.DrawRect(x, y, w, 2 * scale, acR, acG, acB, 220 * alpha)
-    Menu.DrawRect(x, y + totalH - 1 * scale, w, 1 * scale, acR, acG, acB, 75 * alpha)
+    -- Una única tarjeta con una sola sombra y un solo borde exterior.
+    Menu.DrawRoundedRect(x + 4 * scale, y + 5 * scale, w, totalH, 0, 0, 0, 70 * alpha, 9 * scale)
+    Menu.DrawRoundedRect(x, y, w, totalH, 0, 0, 0, cardAlpha, 8 * scale)
+    Menu.DrawRect(x, y, w, 2 * scale, acR, acG, acB, 225 * alpha)
+    Menu.DrawRect(x, y + totalH - 1 * scale, w, 1 * scale, acR, acG, acB, 70 * alpha)
 
-    if bannerH > 0 then
-        if Menu.playerInfoBannerTexture and Menu.playerInfoBannerTexture > 0 and Susano.DrawImage then
-            Susano.DrawImage(Menu.playerInfoBannerTexture, x + 1 * scale, y + 2 * scale, w - 2 * scale, bannerH - 2 * scale,
-                1, 1, 1, 0.88 * alpha * (Menu.RenderAlpha or 1.0), 0)
-            -- Fundido inferior para integrar la imagen con el cuerpo, sin segundo recuadro.
-            local fadeSteps = 9
-            local fadeH = 20 * scale
-            for i = 0, fadeSteps - 1 do
-                local fy = y + bannerH - fadeH + (i * fadeH / fadeSteps)
-                Menu.DrawRect(x + 1 * scale, fy, w - 2 * scale, fadeH / fadeSteps + 1,
-                    0, 0, 0, (22 + i * 15) * alpha)
-            end
-        else
-            local title = "PLAYER INFO"
-            local titleSize = 16
-            local tw = Susano.GetTextWidth and Susano.GetTextWidth(title, titleSize) or (#title * 8)
-            _DrawTextShadow(x + w / 2 - tw / 2, y + bannerH / 2 - 8 * scale, title, titleSize, acR, acG, acB, alpha)
+    -- Banner integrado dentro de la misma tarjeta.
+    if Menu.playerInfoBannerTexture and Menu.playerInfoBannerTexture > 0 and Susano.DrawImage then
+        Susano.DrawImage(
+            Menu.playerInfoBannerTexture,
+            x + 1 * scale, y + 2 * scale,
+            w - 2 * scale, bannerH,
+            1, 1, 1, 0.92 * alpha * (Menu.RenderAlpha or 1.0), 0
+        )
+
+        -- Degradado suave para unir banner y contenido sin corte ni recuadro doble.
+        local fadeH = 22 * scale
+        local steps = 11
+        for i = 0, steps - 1 do
+            local fy = y + bannerH - fadeH + (i * fadeH / steps)
+            Menu.DrawRect(x + 1 * scale, fy, w - 2 * scale, fadeH / steps + 1,
+                0, 0, 0, (18 + i * 12) * alpha)
         end
-        Menu.DrawRect(x + 10 * scale, y + bannerH - 1 * scale, w - 20 * scale, 1 * scale, acR, acG, acB, 120 * alpha)
+    else
+        local title = "PLAYER INFO"
+        local titleSize = 17
+        local titleW = Susano.GetTextWidth and Susano.GetTextWidth(title, titleSize) or (#title * 9)
+        _DrawTextShadow(x + w / 2 - titleW / 2, y + bannerH / 2 - 9 * scale, title, titleSize, acR, acG, acB, alpha)
     end
 
-    Menu.DrawPanelSnow(Menu.PlayerInfoParticles, x + 4 * scale, y + 4 * scale, w - 8 * scale, totalH - 8 * scale, alpha * 0.82, 0.88)
+    local bodyY = y + bannerH
+    Menu.DrawPanelSnow(Menu.PlayerInfoParticles, x + 5 * scale, bodyY + 3 * scale, w - 10 * scale, bodyH - 8 * scale, alpha * 0.78, 0.82)
 
-    local contentY = y + bannerH
-    local left = x + 15 * scale
-    local innerW = w - 30 * scale
-
+    local left = x + 14 * scale
+    local innerW = w - 28 * scale
     local displayName = tostring(info.name or "Jugador")
-    if #displayName > 27 then displayName = string.sub(displayName, 1, 25) .. ".." end
+    if #displayName > 29 then displayName = string.sub(displayName, 1, 27) .. ".." end
 
-    Menu.DrawRoundedRect(left, contentY + 11 * scale, 4 * scale, 25 * scale, acR, acG, acB, 230 * alpha, 2 * scale)
-    _DrawTextShadow(left + 12 * scale, contentY + 12 * scale, displayName, 18, 1, 1, 1, alpha)
+    -- Cabecera limpia: sin caja interna grande, solo jerarquía y una línea de acento.
+    Menu.DrawRoundedRect(left, bodyY + 13 * scale, 4 * scale, 30 * scale, acR, acG, acB, 230 * alpha, 2 * scale)
+    _DrawTextShadow(left + 13 * scale, bodyY + 13 * scale, displayName, 20, 1, 1, 1, alpha)
 
     local status = "EN LINEA"
-    local statusSize = 9
+    local statusSize = 10
     local statusW = Susano.GetTextWidth and Susano.GetTextWidth(status, statusSize) or (#status * 5)
-    Menu.DrawText(x + w - statusW - 14 * scale, contentY + 17 * scale, status, statusSize, acR, acG, acB, 225 * alpha)
+    Menu.DrawRoundedRect(x + w - statusW - 27 * scale, bodyY + 17 * scale, statusW + 14 * scale, 18 * scale,
+        acR, acG, acB, 32 * alpha, 9 * scale)
+    Menu.DrawText(x + w - statusW - 20 * scale, bodyY + 20 * scale, status, statusSize, acR, acG, acB, 235 * alpha)
 
-    local rowY = contentY + 49 * scale
-    local rowStep = 27 * scale
-    _DrawCleanInfoLine(left, rowY, innerW, "ID servidor", tostring(info.serverId or 0), 1, 1, 1, alpha)
-    rowY = rowY + rowStep
-    _DrawCleanInfoLine(left, rowY, innerW, "ID local", tostring(info.localId or 0), 1, 1, 1, alpha)
-    rowY = rowY + rowStep
-    _DrawCleanInfoLine(left, rowY, innerW, "Distancia", string.format("%.1f m", info.distance or 0), 1, 1, 1, alpha)
-    rowY = rowY + rowStep
+    Menu.DrawRect(left, bodyY + 49 * scale, innerW, 1 * scale, 255, 255, 255, 20 * alpha)
+
+    local rowX = left
+    local rowW = innerW
+    local rowH = 29 * scale
+    local rowGap = 3 * scale
+    local rowY = bodyY + 58 * scale
+
+    _DrawPlayerInfoRow(rowX, rowY, rowW, rowH, "ID servidor", tostring(info.serverId or 0), 1, 1, 1, alpha)
+    rowY = rowY + rowH + rowGap
+    _DrawPlayerInfoRow(rowX, rowY, rowW, rowH, "ID local", tostring(info.localId or 0), 1, 1, 1, alpha)
+    rowY = rowY + rowH + rowGap
+    _DrawPlayerInfoRow(rowX, rowY, rowW, rowH, "Distancia", string.format("%.1f m", info.distance or 0), 1, 1, 1, alpha)
+    rowY = rowY + rowH + rowGap
 
     local weaponText = info.hasWeapon and ("ARMADO  0x" .. string.format("%X", tonumber(info.weaponHash) or 0)) or "SIN ARMA"
     local wr, wg, wb = 0.55, 1.0, 0.72
     if info.hasWeapon then wr, wg, wb = 1.0, 0.78, 0.28 end
-    _DrawCleanInfoLine(left, rowY, innerW, "Estado", weaponText, wr, wg, wb, alpha)
+    _DrawPlayerInfoRow(rowX, rowY, rowW, rowH, "Estado", weaponText, wr, wg, wb, alpha)
 end
 
 function Menu.DrawLoadedNotice()
@@ -1745,6 +1807,16 @@ end
 
 function Menu.Render()
     if Menu.TopLevelTabs and (not Menu.Categories or #Menu.Categories <= 1) then Menu.UpdateCategoriesFromTopTab() end
+
+    -- Ajustes visuales pueden ser añadidos por el otro Lua después de cargar
+    -- la librería. Revalidamos de forma ligera para que siempre aparezcan.
+    local settingsNow = GetGameTimer and GetGameTimer() or 0
+    if Menu.EnsureVisualSettings and (not Menu._LastVisualSettingsCheck or settingsNow - Menu._LastVisualSettingsCheck >= 750) then
+        Menu._LastVisualSettingsCheck = settingsNow
+        pcall(Menu.EnsureVisualSettings)
+    end
+
+    if Menu.UpdateMenuInteractionLock then Menu.UpdateMenuInteractionLock() end
     if not Susano.BeginFrame then return end
     local dt = GetFrameTime and GetFrameTime() or 0.016
     Menu.FrameDelta = math.max(0.001, math.min(0.05, dt))
@@ -1777,9 +1849,6 @@ function Menu.Render()
     Susano.BeginFrame()
     if Menu.KeybindsInterfaceAlpha > 0 then Menu.DrawKeybindsInterface(Menu.KeybindsInterfaceAlpha) end
     if (Menu.MenuAlpha or 0) > 0.01 then
-        if Menu.EditorMode and Susano.EnableOverlay then Susano.EnableOverlay(true)
-        elseif not Menu.EditorMode and Susano.EnableOverlay then Susano.EnableOverlay(false) end
-
         local originalY = Menu.Position.y
         Menu.Position.y = originalY + (1.0 - Menu.MenuAlpha) * 7.0
         Menu.RenderAlpha = Menu.MenuAlpha
@@ -1901,45 +1970,88 @@ if Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled and Menu.PlayerInfoBa
 end
 Menu.ApplyTheme("BlackGlass")
 
+local function _NormalizeUiName(value)
+    local text = string.lower(tostring(value or ""))
+    text = text:gsub("á", "a"):gsub("é", "e"):gsub("í", "i"):gsub("ó", "o"):gsub("ú", "u")
+    return text
+end
+
+local function _IsSettingsCategory(cat)
+    local name = _NormalizeUiName(cat and cat.name)
+    return name:find("ajust", 1, true)
+        or name:find("config", 1, true)
+        or name:find("setting", 1, true)
+        or name:find("opcion", 1, true)
+end
+
+local function _FindVisualSettingsTab(cat)
+    if not cat then return nil end
+    cat.tabs = type(cat.tabs) == "table" and cat.tabs or {}
+
+    local fallback = nil
+    for _, tab in SafeIpairs(cat.tabs) do
+        if type(tab.items) == "table" then
+            fallback = fallback or tab
+            local name = _NormalizeUiName(tab.name)
+            if name:find("general", 1, true)
+                or name:find("visual", 1, true)
+                or name:find("apariencia", 1, true)
+                or name:find("menu", 1, true)
+                or name:find("tema", 1, true) then
+                return tab
+            end
+        end
+    end
+
+    if fallback then return fallback end
+
+    local created = { name = "Apariencia", items = {} }
+    table.insert(cat.tabs, created)
+    cat.hasTabs = true
+    return created
+end
+
 local function _AttachVisualSettings(categories)
     for _, cat in SafeIpairs(categories) do
-        if cat.name == "Ajustes" and cat.tabs then
-            for _, tab in SafeIpairs(cat.tabs) do
-                if tab.name == "General" and tab.items then
-                    local colorItemFound = false
-                    for _, it in SafeIpairs(tab.items) do
-                        if it.name == "Fondo negro" and it.type == "toggle" then
-                            it.value = true
-                        elseif it.name == "Copos de nieve" and it.type == "toggle" then
-                            it.value = true
-                            Menu.ShowSnowflakes = true
-                        elseif it.name == "Color del menu" or it.name == "Color del menú" then
-                            colorItemFound = true
-                            it.options = Menu.AccentPresetOrder
-                            it.onClick = function(index, option)
-                                Menu.ApplyAccentPreset(option or Menu.AccentPresetOrder[index] or "Cian")
-                            end
-                        end
+        if _IsSettingsCategory(cat) then
+            local tab = _FindVisualSettingsTab(cat)
+            if tab and type(tab.items) == "table" then
+                local colorItem = nil
+                for _, it in SafeIpairs(tab.items) do
+                    local itemName = _NormalizeUiName(it.name)
+                    if itemName == "fondo negro" and it.type == "toggle" then
+                        it.value = true
+                    elseif itemName:find("copos", 1, true) and it.type == "toggle" then
+                        it.value = Menu.ShowSnowflakes
+                    elseif itemName:find("color del menu", 1, true)
+                        or itemName:find("tema del menu", 1, true)
+                        or itemName == "color" then
+                        colorItem = it
                     end
+                end
 
-                    if not colorItemFound then
-                        local selectedColor = 1
-                        for index, colorName in ipairs(Menu.AccentPresetOrder) do
-                            if colorName == Menu.CurrentAccentName then
-                                selectedColor = index
-                                break
-                            end
-                        end
-                        table.insert(tab.items, {
-                            name = "Color del menu",
-                            type = "selector",
-                            options = Menu.AccentPresetOrder,
-                            selected = selectedColor,
-                            onClick = function(index, option)
-                                Menu.ApplyAccentPreset(option or Menu.AccentPresetOrder[index] or "Cian")
-                            end
-                        })
-                    end
+                local selectedColor = 1
+                for index, colorName in ipairs(Menu.AccentPresetOrder) do
+                    if colorName == Menu.CurrentAccentName then selectedColor = index break end
+                end
+
+                if not colorItem then
+                    colorItem = {
+                        name = "Color del menu",
+                        type = "selector",
+                        options = Menu.AccentPresetOrder,
+                        selected = selectedColor
+                    }
+                    table.insert(tab.items, colorItem)
+                end
+
+                colorItem.type = "selector"
+                colorItem.options = Menu.AccentPresetOrder
+                colorItem.selected = colorItem.selected or selectedColor
+                colorItem.onClick = function(index, option)
+                    local chosen = option or Menu.AccentPresetOrder[index] or "Cian"
+                    Menu.ApplyAccentPreset(chosen)
+                    colorItem.selected = index or colorItem.selected
                 end
             end
         end
@@ -1953,12 +2065,12 @@ function Menu.EnsureVisualSettings()
     end
 end
 
--- Inserta el selector aunque Ajustes se encuentre en otra pestaña superior.
+-- Inserta y mantiene el selector aunque Ajustes sea cargado más tarde
+-- o reconstruido al cambiar de pestaña superior.
 CreateThread(function()
-    while not Menu.Categories and not Menu.TopLevelTabs do Wait(100) end
-    for _ = 1, 8 do
-        Menu.EnsureVisualSettings()
-        Wait(500)
+    while true do
+        if Menu.EnsureVisualSettings then pcall(Menu.EnsureVisualSettings) end
+        Wait(1000)
     end
 end)
 
