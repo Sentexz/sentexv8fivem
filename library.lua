@@ -1,5 +1,5 @@
 local Menu = {}
-print("[Library] SENTEX_READABLE_MOUSE_THEME_PLAYERINFO_PRO loaded - Susano key 0x4E")
+print("[Library] SENTEX_PLAYERINFO_COMPACT_PGDN loaded - Susano key 0x22 / FiveM control 11")
 
 local function SafeTable(value)
     return type(value) == "table" and value or {}
@@ -16,7 +16,7 @@ end
 
 Menu.Visible = false
 Menu.PreventResetFrame = true
-Menu.MenuToggleKey = 0x4E -- N (Susano VK)
+Menu.MenuToggleKey = 0x22 -- PG DN / Page Down (Windows VK)
 Menu.BuildVersion = "Build v8.0.1"
 Menu.CurrentCategory = 2
 Menu.CurrentPage = 1
@@ -72,8 +72,8 @@ Menu.LoadedNoticeStartTime = nil
 Menu.LoadedNoticeDuration = 5600
 
 Menu.SelectingKey = false
-Menu.SelectedKey = 0x4E
-Menu.SelectedKeyName = "N"
+Menu.SelectedKey = 0x22
+Menu.SelectedKeyName = "PG DN"
 Menu.TempKeyPressed = nil          -- para mostrar tecla en selector de menú
 
 Menu.SelectingBind = false
@@ -1059,7 +1059,7 @@ local captureKeys = {
 Menu.KeyNames = {
     [0x08]="Retroceso", [0x09]="Tabulador", [0x0D]="Intro", [0x10]="Mayús",
     [0x11]="Ctrl", [0x12]="Alt", [0x13]="Pausa", [0x14]="Bloq Mayús",
-    [0x1B]="ESC", [0x20]="Espacio", [0x21]="Re Pág", [0x22]="Av Pág",
+    [0x1B]="ESC", [0x20]="Espacio", [0x21]="PG UP", [0x22]="PG DN",
     [0x23]="Fin", [0x24]="Inicio", [0x25]="Izquierda", [0x26]="Arriba",
     [0x27]="Derecha", [0x28]="Abajo", [0x2D]="Insert", [0x2E]="Supr",
     [0x30]="0", [0x31]="1", [0x32]="2", [0x33]="3", [0x34]="4",
@@ -1083,11 +1083,29 @@ Menu.KeyNames = {
 function Menu.GetKeyName(k) return Menu.KeyNames[k] or ("0x"..string.format("%02X",k)) end
 
 function Menu.GetMenuToggleKey()
-    -- Fijo en N para Susano. Si luego permites selector, cambia aquí.
-    Menu.MenuToggleKey = 0x4E
-    Menu.SelectedKey = 0x4E
-    Menu.SelectedKeyName = "N"
-    return 0x4E
+    -- Page Down en Susano usa el Virtual-Key de Windows 0x22.
+    Menu.MenuToggleKey = 0x22
+    Menu.SelectedKey = 0x22
+    Menu.SelectedKeyName = "PG DN"
+    return 0x22
+end
+
+-- Entrada robusta: Susano VK 0x22 como método principal y control FiveM 11
+-- como respaldo. Se combinan en un único booleano para evitar dobles toggles.
+function Menu.IsMenuToggleJustPressed()
+    local pressed = Menu.IsKeyJustPressed(Menu.GetMenuToggleKey())
+
+    if type(IsControlJustPressed) == "function" then
+        local ok, value = pcall(IsControlJustPressed, 0, 11) -- INPUT_FRONTEND_RDOWN / Page Down
+        if ok and value == true then pressed = true end
+    end
+
+    if type(IsDisabledControlJustPressed) == "function" then
+        local ok, value = pcall(IsDisabledControlJustPressed, 0, 11)
+        if ok and value == true then pressed = true end
+    end
+
+    return pressed
 end
 
 function Menu.HandleInput()
@@ -1163,9 +1181,8 @@ function Menu.HandleInput()
         end
     end
 
-    -- Tecla para mostrar/ocultar menú: N fija en Susano (VK 0x4E)
-    local toggleKey = Menu.GetMenuToggleKey and Menu.GetMenuToggleKey() or 0x4E
-    if Menu.IsKeyJustPressed(toggleKey) then
+    -- Tecla para mostrar/ocultar menú: PG DN / Page Down.
+    if Menu.IsMenuToggleJustPressed() then
         Menu.Visible = not Menu.Visible
         if not Menu.Visible and not Menu.ShowKeybinds then
             if Susano.ResetFrame and not Menu.PreventResetFrame then Susano.ResetFrame() end
@@ -1832,7 +1849,7 @@ function Menu.DrawLoadedNotice()
     local statusWidth = Susano.GetTextWidth and Susano.GetTextWidth(status, statusSize) or (string.len(status) * 6)
     Menu.DrawText(x + w / 2 - statusWidth / 2, y + 13, status, statusSize, acR, acG, acB, 235 * alpha)
 
-    local message = "SENTEXMODZ cargado, presiona N para abrir"
+    local message = "SENTEXMODZ cargado, presiona PG DN para abrir"
     local messageSize = 20
     local messageWidth = Susano.GetTextWidth and Susano.GetTextWidth(message, messageSize) or (string.len(message) * 10)
     _DrawTextShadow(x + w / 2 - messageWidth / 2, y + 38, message, messageSize, 1, 1, 1, alpha)
@@ -1973,7 +1990,7 @@ function Menu.DrawInputWindow()
     end
 end
 
--- Inicialización: carga visual y apertura fija con N
+-- Inicialización: carga visual y apertura fija con PG DN
 CreateThread(function()
     Menu.LoadingStartTime = GetGameTimer() or 0
     while Menu.IsLoading do
@@ -1985,9 +2002,9 @@ CreateThread(function()
             Menu.IsLoading = false
             Menu.LoadingComplete = true
             Menu.SelectingKey = false
-            Menu.SelectedKey = 0x4E
-            Menu.MenuToggleKey = 0x4E
-            Menu.SelectedKeyName = "N"
+            Menu.SelectedKey = 0x22
+            Menu.MenuToggleKey = 0x22
+            Menu.SelectedKeyName = "PG DN"
             Menu.TempKeyPressed = nil
             Menu.LoadedNoticeStartTime = GetGameTimer and GetGameTimer() or 0
             Menu.LoadedNoticeActive = true
