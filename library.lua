@@ -1,5 +1,5 @@
 local Menu = {}
-print("[Library] FORCE_SAFE_NO_IPAIRS loaded - PlayerInfo banner fix")
+print("[Library] FORCE_SAFE_CATEGORIES loaded - PlayerInfo banner fix")
 
 local function SafeIpairs(value)
     if type(value) == "table" then
@@ -62,6 +62,10 @@ Menu.TempPressedKey = nil
 
 Menu.ShowKeybinds = false
 Menu.CurrentTopTab = 1
+
+-- Safe defaults: el loader puede asignar Categories/TopLevelTabs despues.
+Menu.Categories = Menu.Categories or {}
+Menu.TopLevelTabs = Menu.TopLevelTabs or nil
 
 -- Panel de anticheat (opcional)
 Menu.AnticheatList = {}
@@ -168,7 +172,7 @@ function Menu.GetActualHeight()
             height = height + p.mainMenuHeight + p.mainMenuSpacing
         end
     else
-        local totalCats = #Menu.Categories - 1
+        local totalCats = #(Menu.Categories or {}) - 1
         local visibleCats = math.min(Menu.ItemsPerPage, totalCats)
         height = height + p.mainMenuHeight + p.mainMenuSpacing + (visibleCats * p.itemHeight)
     end
@@ -528,7 +532,7 @@ function Menu.DrawAnticheatPanel()
             contentHeight = bannerH + p.mainMenuHeight + p.mainMenuSpacing
         end
     else
-        local totalCats = #Menu.Categories - 1
+        local totalCats = #(Menu.Categories or {}) - 1
         local visibleCats = math.min(Menu.ItemsPerPage, totalCats)
         contentHeight = bannerH + p.mainMenuHeight + p.mainMenuSpacing + (visibleCats * p.itemHeight)
     end
@@ -679,7 +683,7 @@ function Menu.DrawCategories()
         startY = startY + tabH + spacing
     end
 
-    local totalCats = #Menu.Categories - 1
+    local totalCats = #(Menu.Categories or {}) - 1
     local maxVis = Menu.ItemsPerPage
     if Menu.CurrentCategory > Menu.CategoryScrollOffset + maxVis + 1 then
         Menu.CategoryScrollOffset = Menu.CurrentCategory - maxVis - 1
@@ -690,7 +694,7 @@ function Menu.DrawCategories()
     local visible = 0
     for i=1, math.min(maxVis, totalCats) do
         local idx = i + Menu.CategoryScrollOffset + 1
-        if idx <= #Menu.Categories then
+        if idx <= #(Menu.Categories or {}) then
             visible = visible + 1
             local cat = Menu.Categories[idx]
             local yPos = startY + (i-1)*itemH
@@ -725,7 +729,7 @@ function Menu.DrawFooter()
             totalH = totalH + p.mainMenuHeight + p.mainMenuSpacing
         end
     else
-        local vis = math.min(Menu.ItemsPerPage, #Menu.Categories-1)
+        local vis = math.min(Menu.ItemsPerPage, #(Menu.Categories or {})-1)
         totalH = totalH + p.mainMenuHeight + p.mainMenuSpacing + (vis * p.itemHeight)
     end
     local footerY = p.y + totalH + p.footerSpacing
@@ -750,7 +754,7 @@ function Menu.DrawFooter()
             end
         end
     else
-        page = string.format("%d/%d", Menu.CurrentCategory-1, #Menu.Categories-1)
+        page = string.format("%d/%d", Menu.CurrentCategory-1, #(Menu.Categories or {})-1)
     end
     if page ~= "" then
         local pw = Susano.GetTextWidth and Susano.GetTextWidth(page, fs) or (string.len(page)*6)
@@ -1227,10 +1231,10 @@ function Menu.HandleInput()
         -- Menú principal
         if Menu.IsKeyJustPressed(0x26) then  -- Up
             Menu.CurrentCategory = Menu.CurrentCategory - 1
-            if Menu.CurrentCategory < 2 then Menu.CurrentCategory = #Menu.Categories end
+            if Menu.CurrentCategory < 2 then Menu.CurrentCategory = #(Menu.Categories or {}) end
         elseif Menu.IsKeyJustPressed(0x28) then  -- Down
             Menu.CurrentCategory = Menu.CurrentCategory + 1
-            if Menu.CurrentCategory > #Menu.Categories then Menu.CurrentCategory = 2 end
+            if Menu.CurrentCategory > #(Menu.Categories or {}) then Menu.CurrentCategory = 2 end
         elseif Menu.IsKeyJustPressed(0x25) or Menu.IsKeyJustPressed(0x41) then  -- Left / A (cambiar top tab)
             if Menu.TopLevelTabs then
                 Menu.CurrentTopTab = Menu.CurrentTopTab - 1
