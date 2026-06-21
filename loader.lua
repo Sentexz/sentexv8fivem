@@ -2,7 +2,7 @@
 -- Rediseño completo con optimización y nuevas funciones de explotación.
 -- Version 2.0.1 Stable
 
-local LibraryURL = "https://raw.githubusercontent.com/Sentexz/sentexfivem/refs/heads/main/library.lua"
+local LibraryURL = "https://raw.githubusercontent.com/Sentexz/sentexv8fivem/refs/heads/main/library.lua"
 
 
 if not Susano or type(Susano) ~= "table" or type(Susano.HttpGet) ~= "function" then
