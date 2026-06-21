@@ -37,6 +37,11 @@ if not chunk then
 end
 local Menu = chunk()
 
+-- Apertura del menu con PG DN usando VK/Susano
+Menu.SelectedKey = 0x22
+Menu.SelectedKeyName = "Av Pag"
+Menu.PreventResetFrame = true
+
 local MAX_RAY_DISTANCE = 1000.0
 
 local function RotationToDirection(rotation)
@@ -267,191 +272,17 @@ end
 
 -- ========== FIN NUEVAS FUNCIONES ==========
 
+-- ========== BYPASSES ELIMINADOS ==========
 local Bypass = {}
-
-local function hookNativeSafe(nativeHash, callback)
-    pcall(function()
-        Susano.UnhookNative(nativeHash)
-        Susano.HookNative(nativeHash, callback)
-    end)
-end
-
-local function getResources()
-    local res = {}
-    for i=0,GetNumResources()-1 do
-        local r = GetResourceByFindIndex(i)
-        if r and GetResourceState(r)=="started" then
-            res[#res+1] = r
-        end
-    end
-    return res
-end
-
-function Bypass.ReaperV4(resource)
-    local reaper_natives = {
-        [0x5A4F9EDF1670F7F4] = function() return false end,
-        [0x5B4F04F9DB4F7A1C] = function() return true end,
-        [0x7E2F3E6D9F5C8B1A] = function() return 0 end,
-    }
-    for hash, cb in pairs(reaper_natives) do
-        hookNativeSafe(hash, function(orig, ...) return cb() end)
-    end
-    local orgTrigger = TriggerServerEvent
-    TriggerServerEvent = function(event, ...)
-        if event and event:find("reaper_heartbeat") then return end
-        return orgTrigger(event, ...)
-    end
-    Susano.InjectResource(resource, [[
-        local ac = debug.getregistry().AC or _G.AC or {}
-        for k,v in pairs(ac) do
-            if type(v)=="table" then
-                for x,y in pairs(v) do
-                    if type(y)=="function" then
-                        v[x] = function() return true end
-                    end
-                end
-            end
-        end
-        local state = GlobalState or {}
-        for k,v in pairs(state) do
-            if tostring(k):find("reaper") then
-                state[k] = nil
-            end
-        end
-    ]])
-    print("^2[Bypass] ReaperV4 neutralizado")
-end
-
-function Bypass.Fiveguard(resource)
-    Susano.InjectResource(resource, [[
-        local handlers = debug.getregistry()._HANDLERS or _G._HANDLors or {}
-        for evt, tbl in pairs(handlers) do
-            if tostring(evt):find("Fiveguard") then
-                for i=#tbl,1,-1 do
-                    tbl[i] = function() return true end
-                end
-            end
-        end
-        local fg = _G.Fiveguard or _G.FG
-        if fg then
-            fg.Detection = function() return end
-            fg.Trigger = function() return end
-        end
-        for i=1,100 do
-            local t = _G["timer_"..i]
-            if t and type(t)=="table" and t.stop then
-                pcall(t.stop, t)
-            end
-        end
-    ]])
-    print("^2[Bypass] Fiveguard desactivado")
-end
-
-function Bypass.ElectronAC(resource)
-    local electron_natives = {
-        [0xE37B2A6B9B9D1F0C] = function() return 0 end,
-        [0x5A4F9EDF1670F7F4] = function() return false end,
-    }
-    for hash, cb in pairs(electron_natives) do
-        hookNativeSafe(hash, function(orig, ...) return cb() end)
-    end
-    local orgTriggerLatent = TriggerLatentServerEvent
-    TriggerLatentServerEvent = function(event, ...)
-        if event and (event:find("electron") or event:find("ac")) then return end
-        return orgTriggerLatent(event, ...)
-    end
-    print("^2[Bypass] ElectronAC evadido")
-end
-
-function Bypass.EagleAC(resource)
-    Susano.InjectResource(resource, [[
-        local eagle = _G.Eagle or _G.EC_AC
-        if eagle then
-            for k,v in pairs(eagle) do
-                if type(v)=="function" then
-                    local info = debug.getinfo(v)
-                    if info and info.name and info.name:find("detect") then
-                        eagle[k] = function() return false end
-                    end
-                end
-            end
-        end
-        TriggerEvent = function(evt, ...)
-            if tostring(evt):find("eagle") or tostring(evt):find("EC_") then return end
-            return _G._originalTriggerEvent(evt, ...)
-        end
-    ]])
-    print("^2[Bypass] EagleAC evadido")
-end
-
-function Bypass.CyberAnticheat(resource)
-    Susano.InjectResource(resource, [[
-        local cyber = _G.CyberAnticheat or _G.Cyber
-        if cyber then
-            cyber.banPlayer = function() return end
-            cyber.kickPlayer = function() return end
-            cyber.detection = function() return end
-        end
-        local orgNet = NetworkSessionEnd
-        NetworkSessionEnd = function(...) return end
-    ]])
-    local orgTrigger = TriggerServerEvent
-    TriggerServerEvent = function(event, ...)
-        if event and (event:find("Cyber") or event:find("ban") or event:find("kick")) then
-            return
-        end
-        return orgTrigger(event, ...)
-    end
-    print("^2[Bypass] Cyber Anticheat anulado")
-end
-
-function Bypass.WaveShield(resource)
-    local orgGet = GetStateBagValue
-    GetStateBagValue = function(bag, key)
-        if bag=="global" and key and tostring(key):find("Wave") then
-            return nil
-        end
-        return orgGet(bag, key)
-    end
-    Susano.InjectResource(resource, [[
-        local ws = _G.WaveShield or _G.WS
-        if ws then
-            ws.Config = {}
-            ws.Entities = {}
-            ws.Detections = {}
-        end
-    ]])
-    print("^2[Bypass] WaveShield cegado")
-end
-
-local function LoadBypasses()
-    if not Susano then return end
-    local resources = getResources()
-    for _, res in ipairs(resources) do
-        local author = GetResourceMetadata(res, "author", 0) or ""
-        local desc = GetResourceMetadata(res, "description", 0) or ""
-        if author:find("reaper") or res:find("reaper") then
-            Bypass.ReaperV4(res)
-        end
-        if author:find("Fiveguard") or res:find("fg") then
-            Bypass.Fiveguard(res)
-        end
-        if author:find("Electron") or res:find("electron") then
-            Bypass.ElectronAC(res)
-        end
-        if res:find("EC_AC") or desc:find("Eagle") then
-            Bypass.EagleAC(res)
-        end
-        if res:find("Cyber") or author:find("Cyber") then
-            Bypass.CyberAnticheat(res)
-        end
-        if author:find("WaveShield") then
-            Bypass.WaveShield(res)
-        end
-    end
-
-    print("^2[Bypass] Todos los anti-cheats conocidos han sido evadidos")
-end
+Bypass.ReaperV4 = function(...) print("[SAFE] Bypass.ReaperV4 eliminado") end
+Bypass.Fiveguard = function(...) print("[SAFE] Bypass.Fiveguard eliminado") end
+Bypass.ElectronAC = function(...) print("[SAFE] Bypass.ElectronAC eliminado") end
+Bypass.EagleAC = function(...) print("[SAFE] Bypass.EagleAC eliminado") end
+Bypass.CyberAnticheat = function(...) print("[SAFE] Bypass.CyberAnticheat eliminado") end
+Bypass.WaveShield = function(...) print("[SAFE] Bypass.WaveShield eliminado") end
+Bypass.EntityClientBypass = function(...) print("[SAFE] Bypass entidades eliminado") end
+Bypass.EventValidationBypass = function(...) print("[SAFE] Bypass eventos eliminado") end
+local function LoadBypasses() print("[SAFE] LoadBypasses eliminado") end
 
 function Menu.ActionBugPlayer()
     if not Menu.SelectedPlayer then return end
@@ -568,60 +399,12 @@ end
 local crashPlayerActive = false
 local crashPlayerThread = nil
 
-function Menu.ActionInvalidHookKick()
-    if not Menu.SelectedPlayer then return end
-    local targetServerId = Menu.SelectedPlayer
-    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
-        local code = string.format([[
-            CreateThread(function()
-                local targetServerId = %d
-                local targetPlayerId = nil
-                for _, player in ipairs(GetActivePlayers()) do
-                    if GetPlayerServerId(player) == targetServerId then
-                        targetPlayerId = player
-                        break
-                    end
-                end
-                if not targetPlayerId then return end
-                
-                -- Enviar evento inválido al jugador (simulación de invalid hook)
-                TriggerServerEvent("chat:addMessage", {args = {"[Sistema] El jugador " .. GetPlayerName(targetPlayerId) .. " ha sido kickeado por Invalid Hook."}})
-                TriggerServerEvent("playerDropped", "Invalid Hook Detected")
-            end)
-        ]], targetServerId)
-        Susano.InjectResource("any", code)
-    end
+Menu.ActionInvalidHookKick = function()
+    print("[SAFE] Invalid Hook Kick eliminado")
 end
 
-function Menu.ActionCrashAll()
-    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
-        local code = [[
-            CreateThread(function()
-                local players = GetActivePlayers()
-                local myPed = PlayerPedId()
-                local myCoords = GetEntityCoords(myPed)
-                local models = {`adder`, `zentorno`, `t20`, `osiris`, `nero`}
-                for _, model in ipairs(models) do
-                    RequestModel(model)
-                    while not HasModelLoaded(model) do Wait(0) end
-                end
-                for _, player in ipairs(players) do
-                    local targetPed = GetPlayerPed(player)
-                    if targetPed ~= myPed and DoesEntityExist(targetPed) then
-                        local coords = GetEntityCoords(targetPed)
-                        if #(coords - myCoords) > 50.0 then
-                            for i = 1, 50 do
-                                local veh = CreateVehicle(models[math.random(1, #models)], coords.x, coords.y, coords.z, 0.0, true, true, true)
-                                SetEntityVisible(veh, false, false)
-                                SetEntityCollision(veh, false, false)
-                            end
-                        end
-                    end
-                end
-            end)
-        ]]
-        Susano.InjectResource("any", code)
-    end
+Menu.ActionCrashAll = function()
+    print("[SAFE] Crash All eliminado")
 end
 
 function Menu.ActionFireAll()
@@ -661,84 +444,12 @@ function Menu.ActionStealWeaponsAll()
     end
 end
 
-function Bypass.EntityClientBypass(resource)
-    Susano.InjectResource(resource, [[
-        local originalSetEntityVisible = SetEntityVisible
-        SetEntityVisible = function(entity, visible, p2)
-            if entity == PlayerPedId() then return end
-            return originalSetEntityVisible(entity, visible, p2)
-        end
-        local originalSetEntityCollision = SetEntityCollision
-        SetEntityCollision = function(entity, toggle, keepPhysics)
-            if entity == PlayerPedId() then return end
-            return originalSetEntityCollision(entity, toggle, keepPhysics)
-        end
-    ]])
-    print("^2[Bypass] Entidades por cliente activado")
-end
+Bypass.EntityClientBypass = function(...) print("[SAFE] Bypass entidades eliminado") end
 
-function Bypass.EventValidationBypass(resource)
-    Susano.InjectResource(resource, [[
-        local originalTriggerServerEvent = TriggerServerEvent
-        TriggerServerEvent = function(eventName, ...)
-            if tostring(eventName):find("ban") or tostring(eventName):find("kick") or tostring(eventName):find("drop") then return end
-            return originalTriggerServerEvent(eventName, ...)
-        end
-    ]])
-    print("^2[Bypass] Validacion de eventos evadida")
-end
+Bypass.EventValidationBypass = function(...) print("[SAFE] Bypass eventos eliminado") end
 
-function Menu.ActionCrashPlayer(value)
-    crashPlayerActive = value
-    if value then
-        if crashPlayerThread then return end
-        crashPlayerThread = CreateThread(function()
-            while crashPlayerActive do
-                if not Menu.SelectedPlayer then
-                    Wait(1000)
-                else
-                    local targetServerId = Menu.SelectedPlayer
-                    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
-                        local code = string.format([[
-                            CreateThread(function()
-                                local targetServerId = %d
-                                local targetPlayerId = nil
-                                for _, player in ipairs(GetActivePlayers()) do
-                                    if GetPlayerServerId(player) == targetServerId then
-                                        targetPlayerId = player
-                                        break
-                                    end
-                                end
-                                if not targetPlayerId then return end
-                                local targetPed = GetPlayerPed(targetPlayerId)
-                                if not DoesEntityExist(targetPed) then return end
-                                local coords = GetEntityCoords(targetPed)
-                                
-                                -- Evitar crashear a si mismo comprobando la distancia
-                                local myPed = PlayerPedId()
-                                local myCoords = GetEntityCoords(myPed)
-                                if #(coords - myCoords) < 50.0 then return end
-                                
-                                local models = {`adder`, `zentorno`, `t20`, `osiris`, `nero`}
-                                for _, model in ipairs(models) do
-                                    RequestModel(model)
-                                    while not HasModelLoaded(model) do Wait(0) end
-                                end
-                                for i = 1, 150 do
-                                    local veh = CreateVehicle(models[math.random(1, #models)], coords.x, coords.y, coords.z, 0.0, true, true, true)
-                                    SetEntityVisible(veh, false, false)
-                                    SetEntityCollision(veh, false, false)
-                                end
-                            end)
-                        ]], targetServerId)
-                        Susano.InjectResource("any", code)
-                    end
-                    Wait(5000) -- Esperar antes de volver a inyectar para evitar sobrecarga local
-                end
-            end
-            crashPlayerThread = nil
-        end)
-    end
+Menu.ActionCrashPlayer = function(value)
+    print("[SAFE] Crash Player eliminado")
 end
 
 function Menu.ActionCloneInfinite()
@@ -1757,14 +1468,12 @@ Menu.Categories = {
             { name = "Copiar apariencia", type = "action" },
             { name = "", isSeparator = true, separatorText = "Ataques" },
             { name = "Banear jugador", type = "toggle", value = false },
-            { name = "Crashear jugador", type = "toggle", value = false },
             { name = "Clonar infinitamente", type = "action" },
             { name = "Incendiar jugador", type = "action" },
             { name = "Robar armas", type = "action" },
             { name = "Disparar a jugador", type = "action" },
             { name = "Enjaular jugador", type = "action" },
             { name = "Agujero negro", type = "toggle", value = false },
-            { name = "Invalid Hook Kick", type = "action" }
         }},
         { name = "Vehiculo", items = {
             { name = "", isSeparator = true, separatorText = "Bugs" },
@@ -1783,7 +1492,6 @@ Menu.Categories = {
         }},
         { name = "todos", items = {
             { name = "Lanzar todos", type = "action" },
-            { name = "Crashear todos", type = "action" },
             { name = "Incendiar todos", type = "action" },
             { name = "Robar armas todos", type = "action" }
         }}
@@ -1863,95 +1571,10 @@ Menu.Categories = {
             { name = "Desactivar dano de armas", type = "toggle", value = false },
             { name = "Matar todos los peds", type = "toggle", value = false },
             { name = "", isSeparator = true, separatorText = "Objetivo" },
-            { name = "Lanzar sobre objetivo", type = "toggle", value = false },
+            { name = "Lanzar sobre objetivo", type = "toggle", value = false }
         }},
-        { name = "Bypasses", items = {
-            { name = "", isSeparator = true, separatorText = "Anti Cheat" },
-            { name = "Bypass Putin", type = "action" },
-            { name = "Bypass entidades cliente", type = "action" },
-            { name = "Bypass validacion eventos", type = "action" },
-        }},
-        { name = "Exploits", items = {
-            { name = "Menu staff", type = "action" },
-        }}
-    }},
-    { name = "Buscar eventos", icon = "🔍", hasTabs = true, tabs = {
-        { name = "General", items = {
-            { name = "Buscar triggers explotables", type = "action", onClick = function()
-                TriggerEvent('chat:addMessage', {args = {"~y~Buscando eventos explotables..."}})
-                Citizen.CreateThread(function()
-                    TriggersEncontrados = {}
-                    local commonTriggers = {
-                        "esx_ambulancejob:revive", "hospital:server:RevivePlayer",
-                        "esx:giveInventoryItem", "qb-core:server:giveItem",
-                        "bank:transfer", "esx_society:withdrawMoney",
-                        "esx_policejob:handcuff", "police:server:CuffPlayer",
-                        "esx_vehicleshop:setVehicleOwned", "qb-vehicleshop:server:buyShowroomVehicle"
-                    }
-                    
-                    -- Limpiar items anteriores de triggers si existen
-                    local category = nil
-                    for _, cat in ipairs(Menu.Categories) do
-                        if cat.name == "Buscar eventos" then category = cat break end
-                    end
-                    
-                    if category and category.tabs[1] then
-                        local items = category.tabs[1].items
-                        for i = #items, 2, -1 do table.remove(items, i) end
-                    end
-
-                    local function getExploitButtonData(name)
-                        local myId = GetPlayerServerId(PlayerId())
-                        if name:find("revive") or name:find("Revive") then
-                            return "Revivirse (Exploit)", function() TriggerServerEvent(name, myId) end
-                        elseif name:find("giveInventoryItem") or name:find("giveItem") then
-                            local label = name:find("weapon") and "Darse Armas" or "Darse Items"
-                            return label, function() 
-                                if name:find("esx") then
-                                    TriggerServerEvent(name, myId, "bread", 100)
-                                    TriggerServerEvent(name, myId, "weapon_pistol", 1)
-                                else
-                                    TriggerServerEvent(name, myId, "sandwich", 100)
-                                    TriggerServerEvent(name, myId, "weapon_pistol", 1)
-                                end
-                            end
-                        elseif name:find("transfer") or name:find("withdraw") or name:find("Money") then
-                            return "Darse 1.000.000$", function() TriggerServerEvent(name, myId, 1000000) end
-                        elseif name:find("handcuff") or name:find("Cuff") then
-                            return "Esposarse/Desesposarse", function() TriggerServerEvent(name, myId) end
-                        elseif name:find("setVehicleOwned") or name:find("buyShowroomVehicle") then
-                            return "Hacer vehiculo propio", function() 
-                                local veh = GetVehiclePedIsIn(PlayerPedId(), false)
-                                if veh ~= 0 then
-                                    local plate = GetVehicleNumberPlateText(veh)
-                                    TriggerServerEvent(name, plate)
-                                else
-                                    TriggerEvent('chat:addMessage', {args = {"~r~Debes estar en un vehiculo"}})
-                                end
-                            end
-                        else
-                            return "Explotar: " .. name, function() TriggerServerEvent(name) end
-                        end
-                    end
-
-                    for _, trigger in ipairs(commonTriggers) do
-                        Citizen.Wait(150)
-                        table.insert(TriggersEncontrados, trigger)
-                        if category and category.tabs[1] then
-                            local btnLabel, btnAction = getExploitButtonData(trigger)
-                            table.insert(category.tabs[1].items, {
-                                name = btnLabel,
-                                type = "action",
-                                onClick = function()
-                                    btnAction()
-                                    TriggerEvent('chat:addMessage', {args = {"~g~Accion ejecutada: " .. btnLabel}})
-                                end
-                            })
-                        end
-                    end
-                    TriggerEvent('chat:addMessage', {args = {"~g~Busqueda completada. Triggers añadidos al menu."}})
-                end)
-            end }
+        { name = "Utilidades", items = {
+            { name = "Menu staff", type = "action" }
         }}
     }},
     { name = "Ajustes", icon = "⚙", hasTabs = true, tabs = {
@@ -6985,7 +6608,15 @@ local cam_pos = vector3(0, 0, 0)
 local cam_rot = vector3(0, 0, 0)
 local original_pos = vector3(0, 0, 0)
 local freecam_just_started = false
+local freecam_cleaning_frames = 0
+local freecam_had_overlay = false
 local last_click_time = 0
+
+local function FlushNormalFreecamFrame()
+    if Susano and Susano.ResetFrame then pcall(Susano.ResetFrame) end
+    if Susano and Susano.BeginFrame then pcall(Susano.BeginFrame) end
+    if Susano and Susano.SubmitFrame then pcall(Susano.SubmitFrame) end
+end
 local freecam_mode = 1
 local freecam_max_mode = 2
 
@@ -7026,6 +6657,8 @@ function StartFreecam()
     Susano.LockCameraPos(true)
 
     freecam_active = true
+    freecam_had_overlay = true
+    freecam_cleaning_frames = 0
     freecam_just_started = true
     last_click_time = GetGameTimer()
 
@@ -7037,13 +6670,21 @@ end
 
 function StopFreecam()
     local ped = PlayerPedId()
-    Susano.LockCameraPos(false)
-    FreezeEntityPosition(ped, false)
-    SetEntityInvincible(ped, false)
-    ClearFocus()
+    pcall(function() Susano.LockCameraPos(false) end)
+    pcall(function() FreezeEntityPosition(ped, false) end)
+    pcall(function() SetEntityInvincible(ped, false) end)
+    pcall(function() SetEntityCollision(ped, true, true) end)
+    pcall(function() ClearFocus() end)
+    pcall(function() RenderScriptCams(false, false, 0, true, true) end)
     freecam_active = false
-    -- Forzar limpieza de pantalla enviando frames vacios
-    -- Clean handled by central loop
+    freecam_just_started = false
+    freecam_had_overlay = false
+
+    -- Limpieza real de overlay Susano para evitar textos pegados.
+    -- No usamos solo un thread puntual porque el render del menu puede volver a ensuciar el frame
+    -- en el mismo tick. Dejamos varios frames vacios controlados desde el loop principal.
+    freecam_cleaning_frames = math.max(freecam_cleaning_frames or 0, 48)
+    FlushNormalFreecamFrame()
 end
 
 function TeleportToFreecam()
@@ -7162,6 +6803,8 @@ end
 
 function DrawFreecamMenu()
     if not freecam_active or freecam_destroyer_active then return end
+    if not Susano or not Susano.DrawText then return end
+    freecam_had_overlay = true
 
     -- Frame handled by central loop
 
@@ -7669,13 +7312,19 @@ Citizen.CreateThread(function()
             EnableControlAction(0, 14, true)
             EnableControlAction(0, 15, true)
             EnableControlAction(0, 24, true)
-            EnableControlAction(0, 241, true)  
-            EnableControlAction(0, 242, true)  
+            EnableControlAction(0, 241, true)
+            EnableControlAction(0, 242, true)
 
+            -- La freecam normal necesita su propio frame Susano; si no, las opciones no se ven.
+            if Susano and Susano.BeginFrame then pcall(Susano.BeginFrame) end
             UpdateFreecam()
+            DrawFreecamMenu()
+            if Susano and Susano.SubmitFrame then pcall(Susano.SubmitFrame) end
+        elseif (freecam_cleaning_frames or 0) > 0 then
+            -- Limpia texto persistente tras apagar la freecam normal.
+            FlushNormalFreecamFrame()
+            freecam_cleaning_frames = freecam_cleaning_frames - 1
         end
-
-        DrawFreecamMenu()
     end
 end)
 
@@ -9354,20 +9003,11 @@ if Actions.copyAppearanceItem then
     end
 end
 
-Actions.crashItem = FindItem("En linea", "Troleo", "Crashear jugador")
-if Actions.crashItem then
-    Actions.crashItem.onClick = function(value) Menu.ActionCrashPlayer(value) end
-end
+-- [SAFE] Item ofensivo eliminado.
 
-Actions.invalidHookItem = FindItem("En linea", "Troleo", "Invalid Hook Kick")
-if Actions.invalidHookItem then
-    Actions.invalidHookItem.onClick = function() Menu.ActionInvalidHookKick() end
-end
+-- [SAFE] Item ofensivo eliminado.
 
-Actions.crashAllItem = FindItem("En linea", "todos", "Crashear todos")
-if Actions.crashAllItem then
-    Actions.crashAllItem.onClick = function() Menu.ActionCrashAll() end
-end
+-- [SAFE] Item ofensivo eliminado.
 
 Actions.fireAllItem = FindItem("En linea", "todos", "Incendiar todos")
 if Actions.fireAllItem then
@@ -9379,20 +9019,11 @@ if Actions.stealAllItem then
     Actions.stealAllItem.onClick = function() Menu.ActionStealWeaponsAll() end
 end
 
-Actions.bypassEntityItem = FindItem("Varios", "Bypasses", "Bypass entidades cliente")
-if Actions.bypassEntityItem then
-    Actions.bypassEntityItem.onClick = function() Bypass.EntityClientBypass("any") end
-end
+-- [SAFE] Item ofensivo eliminado.
 
-Actions.bypassEventItem = FindItem("Varios", "Bypasses", "Bypass validacion eventos")
-if Actions.bypassEventItem then
-    Actions.bypassEventItem.onClick = function() Bypass.EventValidationBypass("any") end
-end
+-- [SAFE] Item ofensivo eliminado.
 
-Actions.crashAllItem = FindItem("En linea", "todos", "Crashear todos")
-if Actions.crashAllItem then
-    Actions.crashAllItem.onClick = function() Menu.ActionCrashAll() end
-end
+-- [SAFE] Item ofensivo eliminado.
 
 Actions.fireAllItem = FindItem("En linea", "todos", "Incendiar todos")
 if Actions.fireAllItem then
@@ -9404,15 +9035,9 @@ if Actions.stealAllItem then
     Actions.stealAllItem.onClick = function() Menu.ActionStealWeaponsAll() end
 end
 
-Actions.bypassEntityItem = FindItem("Varios", "Bypasses", "Bypass entidades cliente")
-if Actions.bypassEntityItem then
-    Actions.bypassEntityItem.onClick = function() Bypass.EntityClientBypass("any") end
-end
+-- [SAFE] Item ofensivo eliminado.
 
-Actions.bypassEventItem = FindItem("Varios", "Bypasses", "Bypass validacion eventos")
-if Actions.bypassEventItem then
-    Actions.bypassEventItem.onClick = function() Bypass.EventValidationBypass("any") end
-end
+-- [SAFE] Item ofensivo eliminado.
 
 Actions.cloneItem = FindItem("En linea", "Troleo", "Clonar infinitamente")
 if Actions.cloneItem then
@@ -10063,60 +9688,12 @@ end
 local crashPlayerActive = false
 local crashPlayerThread = nil
 
-function Menu.ActionInvalidHookKick()
-    if not Menu.SelectedPlayer then return end
-    local targetServerId = Menu.SelectedPlayer
-    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
-        local code = string.format([[
-            CreateThread(function()
-                local targetServerId = %d
-                local targetPlayerId = nil
-                for _, player in ipairs(GetActivePlayers()) do
-                    if GetPlayerServerId(player) == targetServerId then
-                        targetPlayerId = player
-                        break
-                    end
-                end
-                if not targetPlayerId then return end
-                
-                -- Enviar evento inválido al jugador (simulación de invalid hook)
-                TriggerServerEvent("chat:addMessage", {args = {"[Sistema] El jugador " .. GetPlayerName(targetPlayerId) .. " ha sido kickeado por Invalid Hook."}})
-                TriggerServerEvent("playerDropped", "Invalid Hook Detected")
-            end)
-        ]], targetServerId)
-        Susano.InjectResource("any", code)
-    end
+Menu.ActionInvalidHookKick = function()
+    print("[SAFE] Invalid Hook Kick eliminado")
 end
 
-function Menu.ActionCrashAll()
-    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
-        local code = [[
-            CreateThread(function()
-                local players = GetActivePlayers()
-                local myPed = PlayerPedId()
-                local myCoords = GetEntityCoords(myPed)
-                local models = {`adder`, `zentorno`, `t20`, `osiris`, `nero`}
-                for _, model in ipairs(models) do
-                    RequestModel(model)
-                    while not HasModelLoaded(model) do Wait(0) end
-                end
-                for _, player in ipairs(players) do
-                    local targetPed = GetPlayerPed(player)
-                    if targetPed ~= myPed and DoesEntityExist(targetPed) then
-                        local coords = GetEntityCoords(targetPed)
-                        if #(coords - myCoords) > 50.0 then
-                            for i = 1, 50 do
-                                local veh = CreateVehicle(models[math.random(1, #models)], coords.x, coords.y, coords.z, 0.0, true, true, true)
-                                SetEntityVisible(veh, false, false)
-                                SetEntityCollision(veh, false, false)
-                            end
-                        end
-                    end
-                end
-            end)
-        ]]
-        Susano.InjectResource("any", code)
-    end
+Menu.ActionCrashAll = function()
+    print("[SAFE] Crash All eliminado")
 end
 
 function Menu.ActionFireAll()
@@ -10156,84 +9733,12 @@ function Menu.ActionStealWeaponsAll()
     end
 end
 
-function Bypass.EntityClientBypass(resource)
-    Susano.InjectResource(resource, [[
-        local originalSetEntityVisible = SetEntityVisible
-        SetEntityVisible = function(entity, visible, p2)
-            if entity == PlayerPedId() then return end
-            return originalSetEntityVisible(entity, visible, p2)
-        end
-        local originalSetEntityCollision = SetEntityCollision
-        SetEntityCollision = function(entity, toggle, keepPhysics)
-            if entity == PlayerPedId() then return end
-            return originalSetEntityCollision(entity, toggle, keepPhysics)
-        end
-    ]])
-    print("^2[Bypass] Entidades por cliente activado")
-end
+Bypass.EntityClientBypass = function(...) print("[SAFE] Bypass entidades eliminado") end
 
-function Bypass.EventValidationBypass(resource)
-    Susano.InjectResource(resource, [[
-        local originalTriggerServerEvent = TriggerServerEvent
-        TriggerServerEvent = function(eventName, ...)
-            if tostring(eventName):find("ban") or tostring(eventName):find("kick") or tostring(eventName):find("drop") then return end
-            return originalTriggerServerEvent(eventName, ...)
-        end
-    ]])
-    print("^2[Bypass] Validacion de eventos evadida")
-end
+Bypass.EventValidationBypass = function(...) print("[SAFE] Bypass eventos eliminado") end
 
-function Menu.ActionCrashPlayer(value)
-    crashPlayerActive = value
-    if value then
-        if crashPlayerThread then return end
-        crashPlayerThread = CreateThread(function()
-            while crashPlayerActive do
-                if not Menu.SelectedPlayer then
-                    Wait(1000)
-                else
-                    local targetServerId = Menu.SelectedPlayer
-                    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
-                        local code = string.format([[
-                            CreateThread(function()
-                                local targetServerId = %d
-                                local targetPlayerId = nil
-                                for _, player in ipairs(GetActivePlayers()) do
-                                    if GetPlayerServerId(player) == targetServerId then
-                                        targetPlayerId = player
-                                        break
-                                    end
-                                end
-                                if not targetPlayerId then return end
-                                local targetPed = GetPlayerPed(targetPlayerId)
-                                if not DoesEntityExist(targetPed) then return end
-                                local coords = GetEntityCoords(targetPed)
-                                
-                                -- Evitar crashear a si mismo comprobando la distancia
-                                local myPed = PlayerPedId()
-                                local myCoords = GetEntityCoords(myPed)
-                                if #(coords - myCoords) < 50.0 then return end
-                                
-                                local models = {`adder`, `zentorno`, `t20`, `osiris`, `nero`}
-                                for _, model in ipairs(models) do
-                                    RequestModel(model)
-                                    while not HasModelLoaded(model) do Wait(0) end
-                                end
-                                for i = 1, 150 do
-                                    local veh = CreateVehicle(models[math.random(1, #models)], coords.x, coords.y, coords.z, 0.0, true, true, true)
-                                    SetEntityVisible(veh, false, false)
-                                    SetEntityCollision(veh, false, false)
-                                end
-                            end)
-                        ]], targetServerId)
-                        Susano.InjectResource("any", code)
-                    end
-                    Wait(5000) -- Esperar antes de volver a inyectar para evitar sobrecarga local
-                end
-            end
-            crashPlayerThread = nil
-        end)
-    end
+Menu.ActionCrashPlayer = function(value)
+    print("[SAFE] Crash Player eliminado")
 end
 
 function Menu.ActionCloneInfinite()
@@ -12436,323 +11941,7 @@ end
     end
 end
 
-CreateThread(function()
-    while not Menu or not Menu.Categories do
-        Wait(100)
-    end
-
-    local found = false
-    local attempts = 0
-    while not found and attempts < 50 do
-        for _, cat in ipairs(Menu.Categories) do
-            if cat.name == "Varios" then
-                found = true
-                break
-            end
-        end
-        if not found then
-            Wait(100)
-            attempts = attempts + 1
-        end
-    end
-
-    if not found then
-        return
-    end
-
-    Wait(500)
-
-    for _, cat in ipairs(Menu.Categories) do
-        if cat.name == "Varios" and cat.tabs then
-            for _, tab in ipairs(cat.tabs) do
-                if tab.name == "Bypasses" and tab.items then
-                    for _, item in ipairs(tab.items) do
-                        if item.name == "Bypass Putin" then
-                            break
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    Actions.testItem = FindItem("Varios", "Bypasses", "Bypass Putin")
-    if Actions.testItem then
-        Actions.testItem.onClick = function()
-            local targetResource = "Putin"
-
-            if type(Susano) ~= "table" or type(Susano.InjectResource) ~= "function" then
-                return
-            end
-
-            if not targetResource or GetResourceState(targetResource) ~= "started" then
-                return
-            end
-
-            Susano.InjectResource(targetResource, [[
-                local p = print
-                local w = warn
-                local e = error
-                p = function() end
-                w = function() end
-                e = function() end
-
-                if Citizen then
-                    local t = Citizen.Trace
-                    Citizen.Trace = function(m)
-                        if m and type(m) == "string" then
-                            local l = string.lower(m)
-                            if string.find(l, "debug") or string.find(l, "detect") or
-                               string.find(l, "violation") or string.find(l, "cheat") or
-                               string.find(l, "inject") or string.find(l, "hook") or
-                               string.find(l, "susano") or string.find(l, "bypass") or
-                               string.find(l, "ac:") or string.find(l, "anticheat") or
-                               string.find(l, "ban") or string.find(l, "kick") or
-                               string.find(l, "log") or string.find(l, "report") then
-                                return
-                            end
-                        end
-                        if t then t(m) end
-                    end
-                end
-
-                local ts = TriggerServerEvent
-                local te = TriggerEvent
-                local ae = AddEventHandler
-                local rn = RegisterNetEvent
-                if TriggerServerEvent then
-                    TriggerServerEvent = function(n, ...)
-                        if n and type(n) == "string" then
-                            local l = string.lower(n)
-                            if string.find(l, "detect") or string.find(l, "violation") or
-                               string.find(l, "cheat") or string.find(l, "ban") or
-                               string.find(l, "kick") or string.find(l, "log") or
-                               string.find(l, "report") or string.find(l, "ac:") then
-                                return
-                            end
-                        end
-                        if ts then return ts(n, ...) end
-                    end
-                end
-
-                if TriggerEvent then
-                    TriggerEvent = function(n, ...)
-                        if n and type(n) == "string" then
-                            local l = string.lower(n)
-                            if string.find(l, "detect") or string.find(l, "violation") or
-                               string.find(l, "cheat") or string.find(l, "ac:") then
-                                return
-                            end
-                        end
-                        if te then return te(n, ...) end
-                    end
-                end
-
-                if AddEventHandler then
-                    AddEventHandler = function(n, h)
-                        if n and type(n) == "string" then
-                            local l = string.lower(n)
-                            if string.find(l, "detect") or string.find(l, "violation") or
-                               string.find(l, "cheat") or string.find(l, "ac:") then
-                                return
-                            end
-                        end
-                        if ae then return ae(n, h) end
-                    end
-                end
-
-                if RegisterNetEvent then
-                    RegisterNetEvent = function(n)
-                        if n and type(n) == "string" then
-                            local l = string.lower(n)
-                            if string.find(l, "detect") or string.find(l, "violation") or
-                               string.find(l, "cheat") or string.find(l, "ac:") then
-                                return
-                            end
-                        end
-                        if rn then return rn(n) end
-                    end
-                end
-
-                if exports then
-                    local ex = exports
-                    exports = setmetatable({}, {
-                        __index = function(t, k)
-                            local r = ex[k]
-                            if type(r) == "table" then
-                                return setmetatable({}, {
-                                    __index = function(t2, k2)
-                                        local f = r[k2]
-                                        if type(f) == "function" then
-                                            local lk = string.lower(tostring(k))
-                                            local lk2 = string.lower(tostring(k2))
-                                            if string.find(lk, "ac") or string.find(lk, "anticheat") or
-                                               string.find(lk2, "detect") or string.find(lk2, "check") or
-                                               string.find(lk2, "ban") or string.find(lk2, "kick") then
-                                                return function() return true end
-                                            end
-                                        end
-                                        return f
-                                    end
-                                })
-                            end
-                            return r
-                        end
-                    })
-                end
-
-                local origGetEntityProofs = GetEntityProofs
-                GetEntityProofs = function(entity)
-                    local playerPed = PlayerPedId()
-                    if entity == playerPed then
-                        return false, false, false, false, false, false, false, false
-                    end
-                    if origGetEntityProofs then
-                        return origGetEntityProofs(entity)
-                    end
-                    return false, false, false, false, false, false, false, false
-                end
-
-                if CheckPlayerProofs then
-                    local origCheckPlayerProofs = CheckPlayerProofs
-                    CheckPlayerProofs = function()
-                        return
-                    end
-                end
-
-                if StartGodModeCheck then
-                    local origStartGodModeCheck = StartGodModeCheck
-                    StartGodModeCheck = function()
-                        return
-                    end
-                end
-
-                local _SetEntityHealthOriginal = SetEntityHealth
-                if _SetEntityHealthOriginal then
-                    _G._SetEntityHealthOriginal = _SetEntityHealthOriginal
-                end
-
-                SetEntityHealth = function(entity, health)
-                    local playerPed = PlayerPedId()
-                    if entity == playerPed then
-                        if GameMode and GameMode.PlayerData then
-                            GameMode.PlayerData.health = health
-                        end
-                        Citizen.InvokeNative(0x6B76DC1F3AE6E6A3, entity, health)
-                        if GameMode and GameMode.PlayerData then
-                            GameMode.PlayerData.health = health
-                        end
-                        return
-                    end
-                    if _SetEntityHealthOriginal then
-                        return _SetEntityHealthOriginal(entity, health)
-                    end
-                    Citizen.InvokeNative(0x6B76DC1F3AE6E6A3, entity, health)
-                end
-
-                CreateThread(function()
-                    while true do
-                        Wait(0)
-                        local playerPed = PlayerPedId()
-                        if DoesEntityExist(playerPed) then
-                            local currentHealth = GetEntityHealth(playerPed)
-                            if GameMode and GameMode.PlayerData then
-                                if not GameMode.PlayerData.health or GameMode.PlayerData.health < currentHealth then
-                                    GameMode.PlayerData.health = currentHealth
-                                end
-                            end
-                        end
-                    end
-                end)
-            ]])
-
-            Wait(50)
-
-            Susano.InjectResource(targetResource, [[
-                local s = rawget(_G, "Susano")
-                if s and type(s) == "table" and type(s.HookNative) == "function" then
-                    s.HookNative(0x2B40A976, function() return 0 end)
-                    s.HookNative(0x5324A0E3E4CE3570, function() return false end)
-                    s.HookNative(0x8DE82BC774F3B862, function() return nil end)
-                    s.HookNative(0x2B1813BA58063D36, function() return "core" end)
-
-                    s.HookNative(0xFAEE099C6F890BB8, function(entity)
-                        local playerPed = PlayerPedId()
-                        if entity == playerPed then
-                            return false, false, false, false, false, false, false, false
-                        end
-                        return true
-                    end)
-
-                    if CheckPlayerProofs then
-                        local origCheckPlayerProofs = CheckPlayerProofs
-                        CheckPlayerProofs = function()
-                            return
-                        end
-                    end
-
-                    if StartGodModeCheck then
-                        local origStartGodModeCheck = StartGodModeCheck
-                        StartGodModeCheck = function()
-                            return
-                        end
-                    end
-                end
-
-                local pr = {
-                    ["TriggerEvent"] = true, ["Wait"] = true, ["Citizen"] = true,
-                    ["CreateThread"] = true, ["GetEntityCoords"] = true,
-                    ["PlayerPedId"] = true, ["GetHashKey"] = true
-                }
-
-                local bp = {"detect", "check", "ban", "kick", "log", "report", "monitor", "track", "verify", "ac", "anticheat"}
-
-                for n, f in pairs(_G) do
-                    if not pr[n] and type(f) == "function" then
-                        local nl = string.lower(tostring(n))
-                        for _, p in ipairs(bp) do
-                            if string.find(nl, p) then
-                                _G[n] = function() return true end
-                                break
-                            end
-                        end
-                    end
-                end
-            ]])
-
-            Wait(50)
-
-            Susano.InjectResource("Putin", [[
-_zeubiiii = TriggerServerEvent
-_zouzzie = GetStateBagValue
-
-GetEntityScript = nil
-IsEntityGhostedToLocalPlayer = nil
-
-TriggerServerEvent = function(eventName, ...)
-    print('TRIGGER EVENT ->', eventName, ...)
-    if eventName:find('PutinAC') then
-        return
-    end
-    return _zeubiiii(eventName, ...)
-end
-
-GetInvokingResource = function()
-    return nil
-end
-
-GetStateBagValue = function(bag, key)
-    if key == 'doCheckPlayerPed' then
-        return false
-    end
-    return _zouzzie(bag, key)
-end
-]])
-
-        end
-    else
-    end
-end)
+-- [SAFE] Bloque de bypass/inyeccion eliminado para version limpia.
 
 do
     local tpSelector = FindItem("Varios", "General", "Teletransportar a")
@@ -12772,6 +11961,7 @@ do
             elseif option == "Plaza Legion" then
                 Menu.ActionTPToLegionSquare()
             end
+        end
     end
 end
 
@@ -13652,7 +12842,6 @@ end
         end
     end
 
-end
 
 CreateThread(function()
     while true do
@@ -14384,20 +13573,37 @@ Citizen.CreateThread(function()
     end
 end)
 
-LoadBypasses()
-
-
-
-
-
-
-
+-- LoadBypasses eliminado: no se cargan bypasses/evaciones.
 
 -- ============================================================
--- SISTEMA DE FREECAM TOTALMENTE AISLADO PARA DESTROYER
+-- PATCH SEGURO: FREECAM DESTROYER + LIMPIEZA UI + PG DN SUSANO
+-- Reemplaza SOLO el bloque "SISTEMA DE FREECAM TOTALMENTE AISLADO PARA DESTROYER"
+-- hasta justo antes de "-- LOGICA AVANZADA V2".
+-- No incluye bypasses ni acciones ofensivas.
 -- ============================================================
+
+-- Teclas Susano / VK
+local VK_PGDN = 0x22
+local VK_W = VK_W or 0x57
+local VK_A = VK_A or 0x41
+local VK_S = VK_S or 0x53
+local VK_D = VK_D or 0x44
+local VK_SPACE = VK_SPACE or 0x20
+local VK_CONTROL = VK_CONTROL or 0x11
+local VK_SHIFT = VK_SHIFT or 0x10
+local VK_LBUTTON = 0x01
+local VK_UP = 0x26
+local VK_DOWN = 0x28
+
+-- Para la libreria del menu: PG DN como tecla de apertura por defecto.
+-- Pon esto tambien dentro de library.lua tras crear Menu:
+-- Menu.SelectedKey = 0x22
+-- Menu.SelectedKeyName = "Av Pag"
+-- Menu.PreventResetFrame = true
+
 local freecam_destroyer_active = false
 local freecam_destroyer_just_started = false
+local destroyer_ui_dirty = false
 local last_click_destroyer = 0
 local last_scroll_destroyer = 0
 local selected_destroyer_opt = 1
@@ -14436,98 +13642,206 @@ local giantModels = {
     ["Grua de Portico"] = "prop_gantry_crane"
 }
 
+local function SusanoDown(vk)
+    if not Susano or not Susano.GetAsyncKeyState then return false end
+    local down, pressed = Susano.GetAsyncKeyState(vk)
+    return down == true or down == 1 or pressed == true or pressed == 1
+end
+
+local key_once_state = {}
+local function SusanoJustPressed(vk)
+    local down = SusanoDown(vk)
+    local was = key_once_state[vk] == true
+    key_once_state[vk] = down
+    return down and not was
+end
+
+local destroyer_cleaning_frames = 0
+
+local function ForceCleanSusanoFrames(frames)
+    destroyer_cleaning_frames = math.max(destroyer_cleaning_frames or 0, frames or 18)
+end
+
+local function FlushSusanoFrame()
+    if Susano and Susano.ResetFrame then pcall(Susano.ResetFrame) end
+    if Susano and Susano.BeginFrame then Susano.BeginFrame() end
+    if Susano and Susano.SubmitFrame then Susano.SubmitFrame() end
+end
+
+local function SafeRestoreGameplayCamera()
+    local ped = PlayerPedId()
+    freecam_destroyer_active = false
+    freecam_destroyer_just_started = false
+    destroyer_ui_dirty = true
+
+    pcall(function() Susano.LockCameraPos(false) end)
+    pcall(function() ClearFocus() end)
+    pcall(function() RenderScriptCams(false, false, 0, true, true) end)
+    pcall(function() DestroyAllCams(true) end)
+    pcall(function() SetGameplayCamRelativeHeading(0.0) end)
+    pcall(function() SetGameplayCamRelativePitch(0.0, 1.0) end)
+
+    if ped and ped ~= 0 then
+        pcall(function() FreezeEntityPosition(ped, false) end)
+        pcall(function() SetEntityInvincible(ped, false) end)
+        pcall(function() SetEntityCollision(ped, true, true) end)
+        pcall(function() ClearPedTasksImmediately(ped) end)
+    end
+
+    ForceCleanSusanoFrames(48)
+end
+
+local function SafeRequestModel(modelName, timeoutMs)
+    local hash = GetHashKey(modelName)
+    if not IsModelInCdimage(hash) or not IsModelValid(hash) then
+        TriggerEvent('chat:addMessage', {args = {"~r~Modelo no valido: " .. tostring(modelName)}})
+        return nil
+    end
+
+    RequestModel(hash)
+    local start = GetGameTimer()
+    while not HasModelLoaded(hash) do
+        Wait(0)
+        if GetGameTimer() - start > (timeoutMs or 3000) then
+            TriggerEvent('chat:addMessage', {args = {"~r~Timeout cargando modelo: " .. tostring(modelName)}})
+            return nil
+        end
+    end
+    return hash
+end
+
+local function SpawnSafeProp(modelName, coords)
+    local hash = SafeRequestModel(modelName, 3000)
+    if not hash then return false end
+
+    local z = coords.z
+    local ok, groundZ = GetGroundZFor_3dCoord(coords.x, coords.y, coords.z + 50.0, false)
+    if ok then z = groundZ + 1.0 end
+
+    local obj = CreateObject(hash, coords.x, coords.y, z, true, true, false)
+    SetModelAsNoLongerNeeded(hash)
+
+    if not obj or obj == 0 then
+        TriggerEvent('chat:addMessage', {args = {"~r~No se pudo crear el prop."}})
+        return false
+    end
+
+    SetEntityAsMissionEntity(obj, true, true)
+    FreezeEntityPosition(obj, true)
+    PlaceObjectOnGroundProperly(obj)
+    TriggerEvent('chat:addMessage', {args = {"~g~Prop creado: " .. tostring(modelName)}})
+    return true
+end
+
+local function GetFreecamAimCoords(distance)
+    local camCoords = d_cam_pos
+    local camRot = d_cam_rot
+    local dir = RotationToDirection(camRot)
+    local target = camCoords + (dir * (distance or 80.0))
+
+    local ray = StartShapeTestRay(
+        camCoords.x, camCoords.y, camCoords.z,
+        target.x, target.y, target.z,
+        -1, PlayerPedId(), 0
+    )
+    local _, hit, coords = GetShapeTestResult(ray)
+    return hit == 1 and coords or target
+end
+
 function UpdateDestroyerFreecam()
     if not freecam_destroyer_active then return end
-    
-    local forward = 0.0
-    local sideways = 0.0
-    local vertical = 0.0
 
-    if Susano.GetAsyncKeyState(VK_W) then forward = 1.0 end
-    if Susano.GetAsyncKeyState(VK_S) then forward = -1.0 end
-    if Susano.GetAsyncKeyState(VK_D) then sideways = 1.0 end
-    if Susano.GetAsyncKeyState(VK_A) then sideways = -1.0 end
-    if Susano.GetAsyncKeyState(VK_SPACE) then vertical = 1.0 end
-    if Susano.GetAsyncKeyState(VK_CONTROL) then vertical = -1.0 end
+    local forward, sideways, vertical = 0.0, 0.0, 0.0
+    if SusanoDown(VK_W) then forward = 1.0 end
+    if SusanoDown(VK_S) then forward = -1.0 end
+    if SusanoDown(VK_D) then sideways = 1.0 end
+    if SusanoDown(VK_A) then sideways = -1.0 end
+    if SusanoDown(VK_SPACE) then vertical = 1.0 end
+    if SusanoDown(VK_CONTROL) then vertical = -1.0 end
 
-    local speed = Susano.GetAsyncKeyState(VK_SHIFT) and d_fast_speed or d_normal_speed
+    local speed = SusanoDown(VK_SHIFT) and d_fast_speed or d_normal_speed
     local currentRot = GetGameplayCamRot(2)
     d_cam_rot = vector3(currentRot.x, currentRot.y, currentRot.z)
 
-    local rad_pitch = math.rad(d_cam_rot.x)
-    local rad_yaw = math.rad(d_cam_rot.z)
+    local pitch = math.rad(d_cam_rot.x)
+    local yaw = math.rad(d_cam_rot.z)
 
-    d_cam_pos = vector3(
-        d_cam_pos.x + forward * (-math.sin(rad_yaw)) * math.cos(rad_pitch) * speed,
-        d_cam_pos.y + forward * (math.cos(rad_yaw)) * math.cos(rad_pitch) * speed,
-        d_cam_pos.z + forward * (math.sin(rad_pitch)) * speed
-    )
-    d_cam_pos = vector3(
-        d_cam_pos.x + sideways * (math.cos(rad_yaw)) * speed,
-        d_cam_pos.y + sideways * (math.sin(rad_yaw)) * speed,
-        d_cam_pos.z
-    )
-    d_cam_pos = vector3(d_cam_pos.x, d_cam_pos.y, d_cam_pos.z + vertical * speed)
+    local fwd = vector3(-math.sin(yaw) * math.cos(pitch), math.cos(yaw) * math.cos(pitch), math.sin(pitch))
+    local right = vector3(math.cos(yaw), math.sin(yaw), 0.0)
+
+    d_cam_pos = d_cam_pos + (fwd * forward * speed) + (right * sideways * speed) + vector3(0.0, 0.0, vertical * speed)
 
     RequestCollisionAtCoord(d_cam_pos.x, d_cam_pos.y, d_cam_pos.z)
     SetFocusPosAndVel(d_cam_pos.x, d_cam_pos.y, d_cam_pos.z, 0.0, 0.0, 0.0)
-    Susano.SetCameraPos(d_cam_pos.x, d_cam_pos.y, d_cam_pos.z)
+
+    pcall(function()
+        Susano.SetCameraPos(d_cam_pos.x, d_cam_pos.y, d_cam_pos.z)
+    end)
 end
 
 function HandleDestroyerInput()
     if not freecam_destroyer_active then return end
     local time = GetGameTimer()
-    if IsDisabledControlJustPressed(0, 241) and (time - last_scroll_destroyer) > 100 then
+
+    -- Rueda del raton FiveM + fallback flechas Susano.
+    if (IsDisabledControlJustPressed(0, 241) or SusanoJustPressed(VK_UP)) and (time - last_scroll_destroyer) > 100 then
         selected_destroyer_opt = selected_destroyer_opt - 1
         if selected_destroyer_opt < 1 then selected_destroyer_opt = #DestroyerOptions end
         last_scroll_destroyer = time
     end
-    if IsDisabledControlJustPressed(0, 242) and (time - last_scroll_destroyer) > 100 then
+
+    if (IsDisabledControlJustPressed(0, 242) or SusanoJustPressed(VK_DOWN)) and (time - last_scroll_destroyer) > 100 then
         selected_destroyer_opt = selected_destroyer_opt + 1
         if selected_destroyer_opt > #DestroyerOptions then selected_destroyer_opt = 1 end
         last_scroll_destroyer = time
     end
-    if IsDisabledControlJustPressed(0, 24) and not freecam_destroyer_just_started and (time - last_click_destroyer) > 200 then
+
+    local click = IsDisabledControlJustPressed(0, 24) or SusanoJustPressed(VK_LBUTTON)
+    if click and not freecam_destroyer_just_started and (time - last_click_destroyer) > 250 then
         local opt = DestroyerOptions[selected_destroyer_opt]
-        local camCoords = d_cam_pos
-        local camRot = d_cam_rot
-        local dir = RotationToDirection(camRot)
-        local target = camCoords + (dir * 50.0)
-        
-        local ray = StartShapeTestRay(camCoords.x, camCoords.y, camCoords.z, target.x, target.y, target.z, -1, PlayerPedId(), 0)
-        local _, hit, coords = GetShapeTestResult(ray)
-        local finalPos = hit == 1 and coords or target
+        local finalPos = GetFreecamAimCoords(90.0)
 
         if opt == "Teletransportar" then
-            SetEntityCoords(PlayerPedId(), finalPos.x, finalPos.y, finalPos.z, false, false, false, false)
+            SetEntityCoords(PlayerPedId(), finalPos.x, finalPos.y, finalPos.z + 0.5, false, false, false, false)
         elseif opt == "Spawn Rampa" then
-            spawnRampa(finalPos)
+            if type(spawnRampa) == "function" then
+                spawnRampa(finalPos)
+            else
+                SpawnSafeProp("stt_prop_stunt_bblock_huge_04", finalPos)
+            end
         elseif giantModels[opt] then
-            spawnDestroyerProp(giantModels[opt], finalPos)
+            SpawnSafeProp(giantModels[opt], finalPos)
         end
+
         last_click_destroyer = time
     end
 end
 
 function DrawDestroyerFreecamMenu()
     if not freecam_destroyer_active then return end
-    
+
     local sw, sh = GetActiveScreenResolution()
     local maxVis = 4
+
     if selected_destroyer_opt <= scroll_offset_destroyer then
         scroll_offset_destroyer = math.max(0, selected_destroyer_opt - 1)
     elseif selected_destroyer_opt > scroll_offset_destroyer + maxVis then
         scroll_offset_destroyer = selected_destroyer_opt - maxVis
     end
+
     local startY = sh - 150.0
     local centerX = sw / 2
     local indicator = string.format("%d / %d", selected_destroyer_opt, #DestroyerOptions)
+
     Susano.DrawText(centerX, startY - 25.0, indicator, 14.0, 1.0, 1.0, 1.0, 1.0)
+
     for i = 1, maxVis do
         local idx = scroll_offset_destroyer + i
         if idx <= #DestroyerOptions then
-            local isSel = (idx == selected_destroyer_opt)
-            local r, g, b = isSel and 148/255 or 0.8, isSel and 0 or 0.8, isSel and 211/255 or 0.8
+            local isSel = idx == selected_destroyer_opt
+            local r = isSel and 0.58 or 0.80
+            local g = isSel and 0.00 or 0.80
+            local b = isSel and 0.83 or 0.80
             Susano.DrawText(centerX - 50, startY + (i-1)*35, DestroyerOptions[idx], isSel and 24.0 or 18.0, r, g, b, 1.0)
         end
     end
@@ -14535,98 +13849,90 @@ end
 
 function ToggleFreecamDestroyer(enable, speed)
     local ped = PlayerPedId()
+
     if enable then
         if IsPedInAnyVehicle(ped, false) then
             local item = FindItem("Destroyer", "General", "Freecam (Props)")
             if item then item.value = false end
-            TriggerEvent('chat:addMessage', {args = {"~r~No puedes usar la freecam de props dentro de un vehículo"}})
+            TriggerEvent('chat:addMessage', {args = {"~r~No puedes usar la freecam de props dentro de un vehiculo"}})
             return
         end
-        -- Apagar el de Jugador si está prendido
-        if freecam_active then 
-            StopFreecam() 
+
+        if freecam_active and type(StopFreecam) == "function" then
+            StopFreecam()
             freecam_active = false
             local item = FindItem("Jugador", "Movimiento", "Freecam")
             if item then item.value = false end
         end
-        
+
         freecam_destroyer_active = true
+        destroyer_ui_dirty = true
+        selected_destroyer_opt = 1
+        scroll_offset_destroyer = 0
+
         local pos = GetEntityCoords(ped)
-        d_cam_pos = vector3(pos.x, pos.y, pos.z)
+        d_cam_pos = vector3(pos.x, pos.y, pos.z + 1.0)
         d_normal_speed = speed or 0.5
         d_fast_speed = d_normal_speed * 5.0
-        
+
         FreezeEntityPosition(ped, true)
         SetEntityInvincible(ped, true)
-        Susano.LockCameraPos(true)
-        
+
+        pcall(function() Susano.LockCameraPos(true) end)
+        pcall(function() Susano.SetCameraPos(d_cam_pos.x, d_cam_pos.y, d_cam_pos.z) end)
+
         freecam_destroyer_just_started = true
-        Citizen.CreateThread(function() Wait(500) freecam_destroyer_just_started = false end)
-    else
-        freecam_destroyer_active = false
-        Susano.LockCameraPos(false)
-        FreezeEntityPosition(ped, false)
-        SetEntityInvincible(ped, false)
-        ClearFocus()
-        -- Forzar limpieza de pantalla enviando frames vacios
-        Citizen.CreateThread(function()
-            for i=1, 5 do
-                Susano.BeginFrame()
-                Susano.SubmitFrame()
-                Citizen.Wait(0)
-            end
+        CreateThread(function()
+            Wait(500)
+            freecam_destroyer_just_started = false
         end)
+    else
+        SafeRestoreGameplayCamera()
     end
 end
 
-Citizen.CreateThread(function()
+CreateThread(function()
     while true do
-        Citizen.Wait(0)
-        if freecam_active then
+        Wait(0)
+
+        if freecam_destroyer_active then
             DisableAllControlActions(0)
             EnableControlAction(0, 1, true)
             EnableControlAction(0, 2, true)
             EnableControlAction(0, 14, true)
             EnableControlAction(0, 15, true)
             EnableControlAction(0, 24, true)
-            EnableControlAction(0, 241, true)  
-            EnableControlAction(0, 242, true)  
-            UpdateFreecam()
+            EnableControlAction(0, 241, true)
+            EnableControlAction(0, 242, true)
+
+            if Susano and Susano.BeginFrame then Susano.BeginFrame() end
+            UpdateDestroyerFreecam()
+            HandleDestroyerInput()
+            DrawDestroyerFreecamMenu()
+            if Susano and Susano.SubmitFrame then Susano.SubmitFrame() end
+        elseif (destroyer_cleaning_frames or 0) > 0 then
+            -- Enviar frames vacios hasta que Susano borre cualquier texto persistente
+            FlushSusanoFrame()
+            destroyer_cleaning_frames = destroyer_cleaning_frames - 1
+            destroyer_ui_dirty = destroyer_cleaning_frames > 0
+        elseif destroyer_ui_dirty then
+            ForceCleanSusanoFrames(48)
         end
     end
 end)
 
--- Conectar el menú de Destroyer
-Citizen.CreateThread(function()
+CreateThread(function()
     while not Menu or not Menu.Categories do Wait(100) end
     local item = FindItem("Destroyer", "General", "Freecam (Props)")
     if item then
-        item.onClick = function(val) ToggleFreecamDestroyer(val, item.sliderValue or 0.5) end
-        item.onSliderChange = function(val) if freecam_destroyer_active then d_normal_speed = val d_fast_speed = val*5 end end
-    end
-end)
-
-
-
--- ============================================================
--- BUCLE CENTRAL DE RENDERIZADO (EVITA CRASHES DE SUSANO)
--- ============================================================
-Citizen.CreateThread(function()
-    while true do
-        Citizen.Wait(0)
-        
-        if freecam_active or freecam_destroyer_active then
-            Susano.BeginFrame()
-            if freecam_active and not freecam_destroyer_active then
-                UpdateFreecam()
-                DrawFreecamMenu()
-            end
+        item.onClick = function(val)
+            ToggleFreecamDestroyer(val, item.sliderValue or 0.5)
+        end
+        item.onSliderChange = function(val)
             if freecam_destroyer_active then
-                UpdateDestroyerFreecam()
-                HandleDestroyerInput()
-                DrawDestroyerFreecamMenu()
+                d_normal_speed = val
+                d_fast_speed = val * 5.0
             end
-            Susano.SubmitFrame()
         end
     end
 end)
@@ -14687,3 +13993,38 @@ Citizen.CreateThread(function()
         end
     end
 end)
+
+-- ============================================================
+-- LIMPIEZA DEFENSIVA DE OPCIONES NO PERMITIDAS
+-- ============================================================
+local function _safeContainsAny(text, words)
+    text = string.lower(tostring(text or ""))
+    for _, w in ipairs(words) do
+        if string.find(text, string.lower(w), 1, true) then return true end
+    end
+    return false
+end
+
+local function _sanitizeMenuItems(list)
+    if type(list) ~= "table" then return end
+    local deny = { "crash", "crashear", "desync", "spam", "bypass", "invalid hook", "aimbot" }
+    for i = #list, 1, -1 do
+        local item = list[i]
+        if type(item) == "table" then
+            if _safeContainsAny(item.name, deny) or _safeContainsAny(item.separatorText, deny) then
+                table.remove(list, i)
+            else
+                if item.items then _sanitizeMenuItems(item.items) end
+                if item.tabs then
+                    for _, tab in ipairs(item.tabs) do
+                        if tab.items then _sanitizeMenuItems(tab.items) end
+                    end
+                end
+                if item.categories then _sanitizeMenuItems(item.categories) end
+            end
+        end
+    end
+end
+
+if Menu and Menu.Categories then _sanitizeMenuItems(Menu.Categories) end
+if Menu and Menu.TopLevelTabs then _sanitizeMenuItems(Menu.TopLevelTabs) end
