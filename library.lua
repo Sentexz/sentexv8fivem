@@ -24,7 +24,7 @@ Menu.GradientType = 1
 Menu.ScrollbarPosition = 1
 
 Menu.LoadingBarAlpha = 0.0
-Menu.KeySelectorAlpha = 0.0 -- sin selector visual; se deja para compatibilidad interna
+Menu.KeySelectorAlpha = 0.0 -- desactivado
 Menu.KeybindsInterfaceAlpha = 0.0
 
 Menu.LoadingProgress = 0.0
@@ -868,12 +868,25 @@ function Menu.DrawBackground()
 end
 
 
-function Menu.IsKeyJustPressed(keyCode)
+function Menu.IsKeyDownRaw(keyCode)
     if not Susano.GetAsyncKeyState then return false end
-    local down, pressed = Susano.GetAsyncKeyState(keyCode)
+    local a, b = Susano.GetAsyncKeyState(keyCode)
+
+    if type(a) == "boolean" then return a == true end
+    if type(b) == "boolean" then return b == true or a == true end
+    if type(a) == "number" then return a ~= 0 end
+    if type(a) == "table" then
+        return a.down == true or a.pressed == true or a[1] == true or a[1] == 1
+    end
+
+    return false
+end
+
+function Menu.IsKeyJustPressed(keyCode)
+    local down = Menu.IsKeyDownRaw(keyCode)
     local wasDown = Menu.KeyStates[keyCode] or false
-    Menu.KeyStates[keyCode] = down == true
-    return (pressed == true) or (down == true and not wasDown)
+    Menu.KeyStates[keyCode] = down
+    return down and not wasDown
 end
 
 local captureKeys = {
@@ -1145,15 +1158,6 @@ function Menu.HandleInput()
                     elseif item.type == "selector" then
                         if item.onClick then item.onClick(item.selected, item.options[item.selected]) end
                     end
-                end
-            elseif Menu.IsKeyJustPressed(0x78) then  -- F9
-                local item = curTab.items[Menu.CurrentItem]
-                if item and not item.isSeparator then
-                    Menu.SelectingBind = true
-                    Menu.BindingItem = item
-                    Menu.BindingKey = item.bindKey
-                    Menu.BindingKeyName = item.bindKeyName
-                    Menu.TempPressedKey = item.bindKeyName or "..."
                 end
             end
         end
@@ -1455,22 +1459,65 @@ function Menu.DrawPlayerInfoPanel()
 end
 
 -- =====================================================
--- SAFE HOOK INTO RENDER + BOOT FLOW FIXED
+-- SAFE HOOK INTO RENDER + BOOT FLOW FIXED / PG DN ONLY
 -- =====================================================
-local _oldRender = Menu.Render
+
+Menu.SelectingKey = false
+Menu.SelectingBind = false
+Menu.KeySelectorAlpha = 0.0
+Menu.MenuToggleKey = 0x22 -- Page Down / PG DN
+Menu.MenuToggleKeyName = "PG DN"
+
+function Menu.UpdateLoadingState()
+    if Menu.LoadingComplete then
+        Menu.IsLoading = false
+        Menu.LoadingProgress = 100
+        return
+    end
+
+    local now = nil
+    if GetGameTimer then now = GetGameTimer() end
+    if not now then now = math.floor(os.clock() * 1000) end
+
+    if not Menu.LoadingStartTime or Menu.LoadingStartTime <= 0 then
+        Menu.LoadingStartTime = now
+    end
+
+    local elapsed = now - Menu.LoadingStartTime
+    if elapsed < 0 then elapsed = 0 end
+
+    Menu.LoadingProgress = math.min(100, (elapsed / (Menu.LoadingDuration or 3000)) * 100)
+
+    if Menu.LoadingProgress >= 100 then
+        Menu.LoadingProgress = 100
+        Menu.IsLoading = false
+        Menu.LoadingComplete = true
+        Menu.LoadingBarAlpha = 0.0
+        Menu.KeySelectorAlpha = 0.0
+        Menu.SelectingKey = false
+        Menu.SelectingBind = false
+    end
+end
 
 function Menu.Render()
     if Menu.TopLevelTabs and not Menu.Categories then Menu.UpdateCategoriesFromTopTab() end
     if not Susano.BeginFrame then return end
 
+    Menu.UpdateLoadingState()
+
     local dt = GetFrameTime and GetFrameTime() or 0.016
-    local anim = 5.0 * dt
+    local anim = 6.0 * dt
 
-    if Menu.IsLoading then Menu.LoadingBarAlpha = math.min(1, Menu.LoadingBarAlpha + anim)
-    else Menu.LoadingBarAlpha = math.max(0, Menu.LoadingBarAlpha - anim) end
+    if Menu.IsLoading then
+        Menu.LoadingBarAlpha = math.min(1, Menu.LoadingBarAlpha + anim)
+    else
+        Menu.LoadingBarAlpha = 0.0
+    end
 
-    if Menu.SelectingBind then Menu.KeySelectorAlpha = math.min(1, Menu.KeySelectorAlpha + anim)
-    else Menu.KeySelectorAlpha = math.max(0, Menu.KeySelectorAlpha - anim) end
+    -- Key selector completamente desactivado para evitar el rectángulo encima de la carga.
+    Menu.KeySelectorAlpha = 0.0
+    Menu.SelectingKey = false
+    Menu.SelectingBind = false
 
     if Menu.ShowKeybinds then Menu.KeybindsInterfaceAlpha = math.min(1, Menu.KeybindsInterfaceAlpha + anim)
     else Menu.KeybindsInterfaceAlpha = math.max(0, Menu.KeybindsInterfaceAlpha - anim) end
@@ -1491,12 +1538,11 @@ function Menu.Render()
     end
 
     if Menu.InputOpen then Menu.DrawInputWindow() end
-    if Menu.LoadingBarAlpha > 0 then Menu.DrawLoadingBar(Menu.LoadingBarAlpha) end
-    if Menu.KeySelectorAlpha > 0 then Menu.DrawKeySelector(Menu.KeySelectorAlpha) end
+    if Menu.IsLoading and Menu.LoadingBarAlpha > 0 then Menu.DrawLoadingBar(Menu.LoadingBarAlpha) end
     if Menu.OnRender then pcall(Menu.OnRender) end
     if Susano.SubmitFrame then Susano.SubmitFrame() end
 
-    if not Menu.Visible and not Menu.ShowKeybinds and Menu.LoadingBarAlpha <= 0 and Menu.KeySelectorAlpha <= 0 then
+    if not Menu.Visible and not Menu.ShowKeybinds and not Menu.IsLoading then
         if Susano.ResetFrame then Susano.ResetFrame() end
     end
 end
