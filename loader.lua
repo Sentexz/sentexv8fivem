@@ -13575,7 +13575,7 @@ end
 
                     if type(Susano) == "table" and type(Susano.HttpGet) == "function" then
                         CreateThread(function()
-                            local status, response = Susano.HttpGet("http://127.0.9.1:25010/config/load?code=" .. code)
+                            local status, response = Susano.HttpGet("http://82.22.7.19:25010/config/load?code=" .. code)
 
                             if status == 200 and response then
                                 if type(response) ~= "string" then
