@@ -1,5 +1,5 @@
 local Menu = {}
-print("[Library] SENTEX_PLAYERINFO_THEME_NOTICE loaded - Susano key 0x4E")
+print("[Library] SENTEX_SMOOTH_COMPACT_COLOR_PLAYERINFO loaded - Susano key 0x4E")
 
 local function SafeTable(value)
     return type(value) == "table" and value or {}
@@ -20,7 +20,7 @@ Menu.MenuToggleKey = 0x4E -- N (Susano VK)
 Menu.BuildVersion = "Build v8.0.1"
 Menu.CurrentCategory = 2
 Menu.CurrentPage = 1
-Menu.ItemsPerPage = 9
+Menu.ItemsPerPage = 11
 Menu.scrollbarY = nil
 Menu.scrollbarHeight = nil
 Menu.OpenedCategory = nil
@@ -37,8 +37,18 @@ Menu.SelectorY = 0
 Menu.CategorySelectorY = 0
 Menu.TabSelectorX = 0
 Menu.TabSelectorWidth = 0
-Menu.SmoothFactor = 0.22
-Menu.VisualSmoothFactor = 0.20
+Menu.SmoothFactor = 0.10
+Menu.VisualSmoothFactor = 0.11
+Menu.AnimationSpeed = 10.5
+Menu.ToggleAnimationSpeed = 13.0
+Menu.FrameDelta = 0.016
+Menu.MenuAlpha = 0.0
+Menu.RenderAlpha = 1.0
+Menu.ContentAlpha = 1.0
+Menu.ContentSlideY = 0.0
+Menu.LastContentState = nil
+Menu.TopTabSelectorX = 0
+Menu.TopTabSelectorWidth = 0
 Menu.SmoothScrollCatY = 0
 Menu.SmoothScrollItemY = 0
 Menu.PlayerInfoAlpha = 0.0
@@ -99,16 +109,34 @@ Menu.Colors = {
     Selected    = { r = 0,   g = 150, b = 230 },
 }
 Menu.CurrentTheme = "BlackGlass"
+Menu.CurrentAccentName = "Cian"
+Menu.AccentPresets = {
+    Cian    = { accent = {0, 180, 255}, dark = {0, 105, 190}, selected = {0, 145, 225}, border = {0, 210, 255} },
+    Azul    = { accent = {65, 125, 255}, dark = {35, 72, 190}, selected = {48, 102, 230}, border = {95, 155, 255} },
+    Morado  = { accent = {170, 90, 255}, dark = {105, 45, 190}, selected = {145, 70, 225}, border = {195, 125, 255} },
+    Rosa    = { accent = {255, 75, 170}, dark = {190, 35, 110}, selected = {225, 55, 145}, border = {255, 115, 195} },
+    Rojo    = { accent = {255, 70, 75}, dark = {185, 35, 40}, selected = {225, 50, 55}, border = {255, 115, 115} },
+    Verde   = { accent = {60, 220, 145}, dark = {25, 150, 90}, selected = {45, 195, 120}, border = {100, 245, 175} },
+    Naranja = { accent = {255, 145, 45}, dark = {190, 85, 20}, selected = {230, 115, 30}, border = {255, 180, 80} },
+    Blanco  = { accent = {230, 235, 245}, dark = {130, 140, 160}, selected = {185, 195, 215}, border = {255, 255, 255} }
+}
+Menu.AccentPresetOrder = {"Cian", "Azul", "Morado", "Rosa", "Rojo", "Verde", "Naranja", "Blanco"}
+
+function Menu.ApplyAccentPreset(name)
+    local preset = Menu.AccentPresets[name] or Menu.AccentPresets.Cian
+    Menu.CurrentAccentName = Menu.AccentPresets[name] and name or "Cian"
+    Menu.Colors.Accent = { r = preset.accent[1], g = preset.accent[2], b = preset.accent[3] }
+    Menu.Colors.AccentDark = { r = preset.dark[1], g = preset.dark[2], b = preset.dark[3] }
+    Menu.Colors.Selected = { r = preset.selected[1], g = preset.selected[2], b = preset.selected[3] }
+    Menu.Colors.BorderNeon = { r = preset.border[1], g = preset.border[2], b = preset.border[3], a = 165 }
+end
 
 function Menu.ApplyTheme(themeName)
-    -- Solo mantenemos un tema consistente (negro con acentos neón)
-    Menu.Colors.BgMain     = { r = 0,   g = 0,   b = 0,   a = 77 }
-    Menu.Colors.BorderNeon = { r = 0,   g = 210, b = 255, a = 150 }
-    Menu.Colors.Accent     = { r = 0,   g = 180, b = 255 }
-    Menu.Colors.AccentDark = { r = 0,   g = 120, b = 200 }
-    Menu.Colors.Text       = { r = 255, g = 255, b = 255 }
-    Menu.Colors.TextDim    = { r = 160, g = 170, b = 210 }
-    Menu.Colors.Selected   = { r = 0,   g = 150, b = 230 }
+    Menu.CurrentTheme = themeName or "BlackGlass"
+    Menu.Colors.BgMain  = { r = 0, g = 0, b = 0, a = 77 }
+    Menu.Colors.Text    = { r = 255, g = 255, b = 255 }
+    Menu.Colors.TextDim = { r = 160, g = 170, b = 190 }
+    Menu.ApplyAccentPreset(Menu.CurrentAccentName or "Cian")
     if Menu.Banner.enabled and Menu.Banner.imageUrl then
         Menu.LoadBannerTexture(Menu.Banner.imageUrl)
     end
@@ -122,14 +150,14 @@ Menu.Position = {
     x = 45,
     y = 80,
     width = 360,
-    itemHeight = 34,
-    mainMenuHeight = 26,
+    itemHeight = 27,
+    mainMenuHeight = 23,
     headerHeight = 100,
-    footerHeight = 26,
-    footerSpacing = 5,
-    mainMenuSpacing = 5,
+    footerHeight = 24,
+    footerSpacing = 4,
+    mainMenuSpacing = 3,
     footerRadius = 4,
-    itemRadius = 4,
+    itemRadius = 3,
     scrollbarWidth = 7,
     scrollbarPadding = 4,
     headerRadius = 6,
@@ -193,7 +221,7 @@ end
 
 -- Funciones de dibujo base
 function Menu.DrawRect(x, y, w, h, r, g, b, a)
-    a = a or 1.0
+    a = (a or 1.0) * (Menu.RenderAlpha or 1.0)
     if r > 1.0 then r = r/255.0 end
     if g > 1.0 then g = g/255.0 end
     if b > 1.0 then b = b/255.0 end
@@ -210,6 +238,7 @@ end
 function Menu.DrawText(x, y, text, sz, r, g, b, a)
     local scale = Menu.Scale or 1.0
     sz = (sz or 16) * scale
+    a = (a or 1.0) * (Menu.RenderAlpha or 1.0)
     if r > 1.0 then r = r/255.0 end
     if g > 1.0 then g = g/255.0 end
     if b > 1.0 then b = b/255.0 end
@@ -237,6 +266,35 @@ function Menu.DrawRoundedRect(x, y, w, h, r, g, b, a, radius)
     end
 end
 
+function Menu.ExpApproach(current, target, speed)
+    current = tonumber(current) or 0.0
+    target = tonumber(target) or 0.0
+    speed = tonumber(speed) or 10.0
+    local dt = math.max(0.001, math.min(0.05, Menu.FrameDelta or 0.016))
+    local amount = 1.0 - math.exp(-speed * dt)
+    local value = current + (target - current) * amount
+    if math.abs(target - value) < 0.015 then return target end
+    return value
+end
+
+local function _DrawAnimatedGradient(x, y, w, h, alpha)
+    local steps = 14
+    local stepH = h / steps
+    for s = 0, steps - 1 do
+        local sy = y + s * stepH
+        local sh = math.min(stepH + 0.5, y + h - sy)
+        local mix = 1.0 - (s / steps)
+        local intensity = 0.34 + mix * 0.66
+        Menu.DrawRect(
+            x, sy, w, sh,
+            Menu.Colors.Selected.r / 255.0 * intensity,
+            Menu.Colors.Selected.g / 255.0 * intensity,
+            Menu.Colors.Selected.b / 255.0 * intensity,
+            (205 * (alpha or 1.0))
+        )
+    end
+end
+
 -- Header (banner o logo)
 function Menu.DrawHeader()
     local p = Menu.GetScaledPosition()
@@ -244,7 +302,7 @@ function Menu.DrawHeader()
     local h = p.headerHeight
     local bannerH = Menu.Banner.enabled and (Menu.Banner.height * (Menu.Scale or 1.0)) or h
     if Menu.Banner.enabled and Menu.bannerTexture and Menu.bannerTexture>0 and Susano.DrawImage then
-        Susano.DrawImage(Menu.bannerTexture, x, y, w, bannerH, 1,1,1,1,0)
+        Susano.DrawImage(Menu.bannerTexture, x, y, w, bannerH, 1,1,1,(Menu.RenderAlpha or 1.0),0)
     else
         Menu.DrawRoundedRect(x, y, w, h, 0,0,0, Menu.Colors.BgMain.a/255.0, p.headerRadius)
         Menu.DrawRect(x, y+h-2, w, 1, Menu.Colors.BorderNeon.r/255.0, Menu.Colors.BorderNeon.g/255.0, Menu.Colors.BorderNeon.b/255.0, Menu.Colors.BorderNeon.a/255.0)
@@ -306,7 +364,7 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
     if type(Menu[stateName]) ~= "number" or Menu[stateName] == 0 then
         Menu[stateName] = targetY
     end
-    Menu[stateName] = Menu[stateName] + (targetY - Menu[stateName]) * (Menu.VisualSmoothFactor or 0.20)
+    Menu[stateName] = Menu.ExpApproach(Menu[stateName], targetY, 10.0)
     local thumbY = Menu[stateName]
 
     -- Thumb premium con doble capa.
@@ -318,36 +376,44 @@ end
 -- Pestañas
 function Menu.DrawTabs(category, x, startY, width, tabHeight)
     if not category or not category.hasTabs or not category.tabs then return end
-    local scale = Menu.Scale or 1.0
     local numTabs = #category.tabs
+    if numTabs < 1 then return end
+
     local tabWidth = width / numTabs
+    local selectedIndex = math.max(1, math.min(numTabs, Menu.CurrentTab or 1))
+    local targetX = x + (selectedIndex - 1) * tabWidth
+    local targetW = selectedIndex == numTabs and (x + width - targetX) or tabWidth
+
+    if not Menu.TabSelectorX or Menu.TabSelectorX == 0 then
+        Menu.TabSelectorX = targetX
+        Menu.TabSelectorWidth = targetW
+    end
+    Menu.TabSelectorX = Menu.ExpApproach(Menu.TabSelectorX, targetX, 11.5)
+    Menu.TabSelectorWidth = Menu.ExpApproach(Menu.TabSelectorWidth, targetW, 11.5)
+
+    for i = 1, numTabs do
+        local tabX = x + (i - 1) * tabWidth
+        local currentW = i == numTabs and (x + width - tabX) or tabWidth
+        Menu.DrawRect(tabX, startY, currentW, tabHeight, 0, 0, 0, Menu.Colors.BgMain.a / 255.0 * 0.42)
+    end
+
+    _DrawAnimatedGradient(Menu.TabSelectorX, startY, Menu.TabSelectorWidth, tabHeight, 1.0)
+    Menu.DrawRect(Menu.TabSelectorX, startY + tabHeight - 2, Menu.TabSelectorWidth, 1,
+        Menu.Colors.Accent.r / 255.0, Menu.Colors.Accent.g / 255.0, Menu.Colors.Accent.b / 255.0, 255)
+
     for i, tab in ipairs(category.tabs) do
-        local tabX = x + (i-1)*tabWidth
-        local curW = (i==numTabs) and (x+width - tabX) or (tabWidth + 0.5*scale)
-        local isSel = (i == Menu.CurrentTab)
-        Menu.DrawRect(tabX, startY, curW, tabHeight, 0,0,0, Menu.Colors.BgMain.a/255.0 * (isSel and 0 or 0.5))
-        if isSel then
-            local steps = 10
-            local stepH = tabHeight / steps
-            for s=0, steps-1 do
-                local sY = startY + s*stepH
-                local sH = math.min(stepH, startY+tabHeight - sY)
-                if sH > 0 then
-                    local mix = 1 - (s / steps)
-                    local r = Menu.Colors.Selected.r/255.0 * (0.3 + mix*0.7)
-                    local g = Menu.Colors.Selected.g/255.0 * (0.3 + mix*0.7)
-                    local b = Menu.Colors.Selected.b/255.0 * (0.3 + mix*0.7)
-                    Menu.DrawRect(tabX, sY, curW, sH, r, g, b, 230)
-                end
-            end
-            Menu.DrawRect(tabX, startY+tabHeight-2, curW, 1, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255)
-        end
-        local fontSize = 15
-        local tw = Susano.GetTextWidth and Susano.GetTextWidth(tab.name, fontSize) or (string.len(tab.name)*8)
-        local tx = tabX + curW/2 - tw/2
-        local ty = startY + tabHeight/2 - fontSize/2
-        local r,g,b = isSel and 255 or Menu.Colors.Text.r, isSel and 255 or Menu.Colors.Text.g, isSel and 255 or Menu.Colors.Text.b
-        Menu.DrawText(tx, ty, tab.name, fontSize, r/255.0, g/255.0, b/255.0, 1.0)
+        local tabX = x + (i - 1) * tabWidth
+        local currentW = i == numTabs and (x + width - tabX) or tabWidth
+        local isSelected = i == selectedIndex
+        local fontSize = 13
+        local name = tostring(tab.name or "")
+        local tw = Susano.GetTextWidth and Susano.GetTextWidth(name, fontSize) or (#name * 7)
+        local tx = tabX + currentW / 2 - tw / 2
+        local ty = startY + tabHeight / 2 - fontSize / 2
+        local r = isSelected and 255 or Menu.Colors.TextDim.r
+        local g = isSelected and 255 or Menu.Colors.TextDim.g
+        local b = isSelected and 255 or Menu.Colors.TextDim.b
+        Menu.DrawText(tx, ty, name, fontSize, r / 255.0, g / 255.0, b / 255.0, isSelected and 1.0 or 0.88)
     end
 end
 
@@ -370,20 +436,20 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected, isCategory
     if item.isSeparator then
         Menu.DrawRect(x, itemY, width, itemHeight, 0,0,0, Menu.Colors.BgMain.a/255.0 * 0.3)
         if item.separatorText then
-            local fs = 13
+            local fs = 11
             local tw = Susano.GetTextWidth and Susano.GetTextWidth(item.separatorText, fs) or (string.len(item.separatorText)*7)
             local tx = x + width/2 - tw/2
             local ty = itemY + itemHeight/2 - fs/2
             Menu.DrawText(tx, ty, item.separatorText, fs, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 200)
             local barY = itemY + itemHeight/2
-            local barL = 50
+            local barL = 38
             Menu.DrawRect(x+20, barY, barL, 1, 150,150,200, 100)
             Menu.DrawRect(x+width-20-barL, barY, barL, 1, 150,150,200, 100)
         end
         return
     end
 
-    Menu.DrawRect(x, itemY, width, itemHeight, 0,0,0, Menu.Colors.BgMain.a/255.0 * 0.4)
+    Menu.DrawRect(x, itemY, width, itemHeight, 0,0,0, Menu.Colors.BgMain.a/255.0 * 0.28)
 
     if isSelected then
         if not isCategory and Menu.SelectorY == 0 then Menu.SelectorY = itemY end
@@ -391,18 +457,18 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected, isCategory
         
         local drawY = isCategory and Menu.CategorySelectorY or Menu.SelectorY
         local targetY = itemY
-        local smooth = Menu.SmoothFactor
+        local smooth = Menu.AnimationSpeed or 10.5
         if isCategory then
-            Menu.CategorySelectorY = drawY + (targetY - drawY) * smooth
+            Menu.CategorySelectorY = Menu.ExpApproach(drawY, targetY, smooth)
             if math.abs(Menu.CategorySelectorY - targetY) < 0.5 then Menu.CategorySelectorY = targetY end
             drawY = Menu.CategorySelectorY
         else
-            Menu.SelectorY = drawY + (targetY - drawY) * smooth
+            Menu.SelectorY = Menu.ExpApproach(drawY, targetY, smooth)
             if math.abs(Menu.SelectorY - targetY) < 0.5 then Menu.SelectorY = targetY end
             drawY = Menu.SelectorY
         end
 
-        local steps = 25
+        local steps = 16
         local stepH = itemHeight / steps
         for s=0, steps-1 do
             local sY = drawY + s*stepH
@@ -419,15 +485,15 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected, isCategory
         Menu.DrawRect(x, drawY+itemHeight-1, width, 1, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255)
         Menu.DrawRect(x, drawY, 2, itemHeight, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255)
         Menu.DrawRect(x+width-2, drawY, 2, itemHeight, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 200)
-        Menu.DrawText(x+18+1, itemY+itemHeight/2-8+1, item.name, 17, 0,0,0, 150)
+        Menu.DrawText(x+15+1, itemY+itemHeight/2-7+1, item.name, 14, 0,0,0, 145)
     end
 
-    local textX = x + 22
-    local textY = itemY + itemHeight/2 - 8
-    Menu.DrawText(textX, textY, item.name, 17, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255)
+    local textX = x + 16
+    local textY = itemY + itemHeight/2 - 7
+    Menu.DrawText(textX, textY, item.name, 14, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255)
     
     if isCategory then
-        Menu.DrawText(x+width-32, textY, "›", 18, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 200)
+        Menu.DrawText(x+width-25, textY, "›", 15, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 200)
     end
 
     if not isCategory then
@@ -437,14 +503,14 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected, isCategory
             if item.animTarget == nil then item.animTarget = item.value and 1 or 0 end
             local diff = item.animTarget - item.animProgress
             if math.abs(diff) > 0.01 then
-                item.animProgress = item.animProgress + diff * Menu.SmoothFactor
+                item.animProgress = Menu.ExpApproach(item.animProgress, item.animTarget, Menu.ToggleAnimationSpeed or 13.0)
             else
                 item.animProgress = item.animTarget
             end
             
-            local toggleW = 40 * scale
-            local toggleH = 20 * scale
-            local toggleX = x + width - toggleW - 18
+            local toggleW = 32 * scale
+            local toggleH = 16 * scale
+            local toggleX = x + width - toggleW - 14
             local toggleY = itemY + (itemHeight/2) - toggleH/2
             local rad = toggleH/2
             local rOff, gOff, bOff = 50/255.0, 60/255.0, 90/255.0
@@ -454,17 +520,17 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected, isCategory
             local b = bOff + (bOn - bOff) * item.animProgress
             Menu.DrawRoundedRect(toggleX, toggleY, toggleW, toggleH, r, g, b, 255, rad)
             
-            local knobSize = toggleH - 6
-            local knobY = toggleY + 3
-            local offX = toggleX + 3
-            local onX = toggleX + toggleW - knobSize - 3
+            local knobSize = toggleH - 4
+            local knobY = toggleY + 2
+            local offX = toggleX + 2
+            local onX = toggleX + toggleW - knobSize - 2
             local knobX = offX + (onX - offX) * item.animProgress
             Menu.DrawRoundedRect(knobX, knobY, knobSize, knobSize, 255,255,255, 255, knobSize/2)
             
         elseif item.type == "slider" then
-            local sliderW = 120 * scale
-            local sliderH = 5 * scale
-            local sliderX = x + width - sliderW - 70
+            local sliderW = 96 * scale
+            local sliderH = 4 * scale
+            local sliderX = x + width - sliderW - 54
             local sliderY = itemY + (itemHeight/2) - sliderH/2
             local minV = item.min or 0
             local maxV = item.max or 100
@@ -475,25 +541,25 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected, isCategory
             if percent > 0 then
                 Menu.DrawRect(sliderX, sliderY, sliderW * percent, sliderH, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255)
             end
-            local thumbSize = 10 * scale
+            local thumbSize = 8 * scale
             local thumbX = sliderX + sliderW*percent - thumbSize/2
             local thumbY = sliderY + sliderH/2 - thumbSize/2
             Menu.DrawRoundedRect(thumbX, thumbY, thumbSize, thumbSize, 255,255,255, 255, thumbSize/2)
             local valText = string.format("%.0f", val)
-            local tw = Susano.GetTextWidth and Susano.GetTextWidth(valText, 11) or (string.len(valText)*6)
-            Menu.DrawText(sliderX+sliderW+10, sliderY-2, valText, 11, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 200)
+            local tw = Susano.GetTextWidth and Susano.GetTextWidth(valText, 10) or (string.len(valText)*6)
+            Menu.DrawText(sliderX+sliderW+8, sliderY-2, valText, 10, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 200)
         elseif item.type == "selector" and item.options then
             local selIdx = item.selected or 1
             local opt = item.options[selIdx] or ""
             local full = "< " .. opt .. " >"
-            local fs = 15
+            local fs = 12
             local tw = Susano.GetTextWidth and Susano.GetTextWidth(full, fs) or (string.len(full)*8)
-            local tx = x + width - tw - 22
+            local tx = x + width - tw - 16
             Menu.DrawText(tx, textY, full, fs, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 255)
         elseif item.type == "toggle_selector" then
-            local toggleW = 36 * scale
-            local toggleH = 18 * scale
-            local toggleX = x + width - toggleW - 18
+            local toggleW = 30 * scale
+            local toggleH = 15 * scale
+            local toggleX = x + width - toggleW - 14
             local toggleY = itemY + (itemHeight/2) - toggleH/2
             local rad = toggleH/2
             if item.value then
@@ -509,7 +575,7 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected, isCategory
                 local selIdx = item.selected or 1
                 local opt = item.options[selIdx] or ""
                 local optText = "< " .. opt .. " >"
-                local fs = 13
+                local fs = 11
                 local tw = Susano.GetTextWidth and Susano.GetTextWidth(optText, fs) or (string.len(optText)*7)
                 local tx = toggleX - tw - 12
                 Menu.DrawText(tx, textY, optText, fs, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 255)
@@ -588,7 +654,7 @@ function Menu.DrawCategories()
 
         local p = Menu.GetScaledPosition()
         local x = p.x
-        local startY = p.y + p.headerHeight
+        local startY = p.y + p.headerHeight + (Menu.ContentSlideY or 0)
         local w = p.width
         local itemH = p.itemHeight
         local tabH = p.mainMenuHeight
@@ -630,7 +696,7 @@ function Menu.DrawCategories()
     local scale = Menu.Scale or 1.0
     local x = p.x
     local bannerH = Menu.Banner.enabled and (Menu.Banner.height * scale) or p.headerHeight
-    local startY = p.y + bannerH
+    local startY = p.y + bannerH + (Menu.ContentSlideY or 0)
     local w = p.width
     local itemH = p.itemHeight
     local tabH = p.mainMenuHeight
@@ -639,32 +705,40 @@ function Menu.DrawCategories()
     if Menu.TopLevelTabs then
         local tabCount = #Menu.TopLevelTabs
         local tabW = w / tabCount
+        local selectedTop = math.max(1, math.min(tabCount, Menu.CurrentTopTab or 1))
+        local targetX = x + (selectedTop - 1) * tabW
+        local targetW = selectedTop == tabCount and (x + w - targetX) or tabW
+
+        if not Menu.TopTabSelectorX or Menu.TopTabSelectorX == 0 then
+            Menu.TopTabSelectorX = targetX
+            Menu.TopTabSelectorWidth = targetW
+        end
+        Menu.TopTabSelectorX = Menu.ExpApproach(Menu.TopTabSelectorX, targetX, 11.5)
+        Menu.TopTabSelectorWidth = Menu.ExpApproach(Menu.TopTabSelectorWidth, targetW, 11.5)
+
+        for i = 1, tabCount do
+            local tabX = x + (i - 1) * tabW
+            local currentW = i == tabCount and (x + w - tabX) or tabW
+            Menu.DrawRect(tabX, startY, currentW, tabH, 0, 0, 0, Menu.Colors.BgMain.a / 255.0 * 0.42)
+        end
+
+        _DrawAnimatedGradient(Menu.TopTabSelectorX, startY, Menu.TopTabSelectorWidth, tabH, 1.0)
+        Menu.DrawRect(Menu.TopTabSelectorX, startY + tabH - 2, Menu.TopTabSelectorWidth, 1,
+            Menu.Colors.Accent.r / 255.0, Menu.Colors.Accent.g / 255.0, Menu.Colors.Accent.b / 255.0, 255)
+
         for i, tab in ipairs(Menu.TopLevelTabs) do
-            local tabX = x + (i-1)*tabW
-            local isSel = (i == Menu.CurrentTopTab)
-            Menu.DrawRect(tabX, startY, tabW, tabH, 0,0,0, Menu.Colors.BgMain.a/255.0 * (isSel and 0 or 0.5))
-            if isSel then
-                local steps = 10
-                local stepH = tabH / steps
-                for s=0, steps-1 do
-                    local sY = startY + s*stepH
-                    local sH = math.min(stepH, startY+tabH - sY)
-                    if sH > 0 then
-                        local mix = 1 - (s / steps)
-                        local r = Menu.Colors.Selected.r/255.0 * (0.3 + mix*0.7)
-                        local g = Menu.Colors.Selected.g/255.0 * (0.3 + mix*0.7)
-                        local b = Menu.Colors.Selected.b/255.0 * (0.3 + mix*0.7)
-                        Menu.DrawRect(tabX, sY, tabW, sH, r, g, b, 230)
-                    end
-                end
-                Menu.DrawRect(tabX, startY+tabH-2, tabW, 1, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255)
-            end
-            local fs = 15
-            local tw = Susano.GetTextWidth and Susano.GetTextWidth(tab.name, fs) or (string.len(tab.name)*8)
-            local tx = tabX + tabW/2 - tw/2
-            local ty = startY + tabH/2 - fs/2
-            local r,g,b = isSel and 255 or Menu.Colors.Text.r, isSel and 255 or Menu.Colors.Text.g, isSel and 255 or Menu.Colors.Text.b
-            Menu.DrawText(tx, ty, tab.name, fs, r/255.0, g/255.0, b/255.0, 1.0)
+            local tabX = x + (i - 1) * tabW
+            local currentW = i == tabCount and (x + w - tabX) or tabW
+            local isSelected = i == selectedTop
+            local fs = 13
+            local name = tostring(tab.name or "")
+            local tw = Susano.GetTextWidth and Susano.GetTextWidth(name, fs) or (#name * 7)
+            local tx = tabX + currentW / 2 - tw / 2
+            local ty = startY + tabH / 2 - fs / 2
+            local r = isSelected and 255 or Menu.Colors.TextDim.r
+            local g = isSelected and 255 or Menu.Colors.TextDim.g
+            local b = isSelected and 255 or Menu.Colors.TextDim.b
+            Menu.DrawText(tx, ty, name, fs, r / 255.0, g / 255.0, b / 255.0, isSelected and 1.0 or 0.88)
         end
         startY = startY + tabH + spacing
     else
@@ -907,7 +981,11 @@ function Menu.DrawBackground()
             if part.x < 0 then part.x = 1 elseif part.x > 1 then part.x = 0 end
             local px = x + part.x * w
             local py = y + part.y * actualHeight
-            Menu.DrawRect(px, py, part.size, part.size, 200,220,255, 100)
+            if part.size >= 2 then
+                Menu.DrawRect(px - 1, py - 1, part.size + 2, part.size + 2,
+                    Menu.Colors.Accent.r, Menu.Colors.Accent.g, Menu.Colors.Accent.b, 18)
+            end
+            Menu.DrawRect(px, py, part.size, part.size, 225, 238, 255, 100)
         end
     end
 end
@@ -1278,6 +1356,7 @@ function Menu.UpdateCategoriesFromTopTab()
     for _, cat in SafeIpairs(currentTop.categories) do
         table.insert(Menu.Categories, cat)
     end
+    if Menu.EnsureVisualSettings then Menu.EnsureVisualSettings() end
     Menu.CurrentCategory = 2
     Menu.CategoryScrollOffset = 0
     Menu.OpenedCategory = nil
@@ -1415,21 +1494,21 @@ function Menu.UpdateHoveredPlayerInfo()
     local item, cat, tab = Menu.GetCurrentSelectedItem()
     if not Menu.Visible or not Menu.IsOnlineCategory(cat, tab) or not item or item.isSeparator then
         Menu.PlayerInfo = nil
-        Menu.PlayerInfoAlpha = math.max(0, (Menu.PlayerInfoAlpha or 0) - 0.08)
+        Menu.PlayerInfoAlpha = Menu.ExpApproach(Menu.PlayerInfoAlpha or 0, 0.0, 12.0)
         return
     end
 
     local pid, sid = Menu.ResolvePlayerFromItem(item)
     if not pid then
         Menu.PlayerInfo = nil
-        Menu.PlayerInfoAlpha = math.max(0, (Menu.PlayerInfoAlpha or 0) - 0.08)
+        Menu.PlayerInfoAlpha = Menu.ExpApproach(Menu.PlayerInfoAlpha or 0, 0.0, 12.0)
         return
     end
 
     local ped = GetPlayerPed(pid)
     if not ped or ped == 0 or (DoesEntityExist and not DoesEntityExist(ped)) then
         Menu.PlayerInfo = nil
-        Menu.PlayerInfoAlpha = math.max(0, (Menu.PlayerInfoAlpha or 0) - 0.08)
+        Menu.PlayerInfoAlpha = Menu.ExpApproach(Menu.PlayerInfoAlpha or 0, 0.0, 12.0)
         return
     end
 
@@ -1453,7 +1532,7 @@ function Menu.UpdateHoveredPlayerInfo()
         hasWeapon = hasWeapon,
         weaponHash = weaponHash or 0
     }
-    Menu.PlayerInfoAlpha = math.min(1, (Menu.PlayerInfoAlpha or 0) + 0.12)
+    Menu.PlayerInfoAlpha = Menu.ExpApproach(Menu.PlayerInfoAlpha or 0, 1.0, 9.0)
 end
 
 -- Copos independientes para los paneles secundarios. Comparten el mismo
@@ -1496,9 +1575,10 @@ function Menu.DrawPanelSnow(particles, x, y, w, h, alpha, speedMultiplier)
         local particleAlpha = (size == 2 and 125 or 90) * alpha
 
         if part.glow then
-            Menu.DrawRect(px - 1, py - 1, size + 2, size + 2, 90, 180, 255, 24 * alpha)
+            Menu.DrawRect(px - 1, py - 1, size + 2, size + 2,
+                Menu.Colors.Accent.r, Menu.Colors.Accent.g, Menu.Colors.Accent.b, 26 * alpha)
         end
-        Menu.DrawRect(px, py, size, size, 210, 232, 255, particleAlpha)
+        Menu.DrawRect(px, py, size, size, 225, 238, 255, particleAlpha)
     end
 end
 
@@ -1507,108 +1587,99 @@ local function _DrawTextShadow(x, y, text, size, r, g, b, alpha)
     Menu.DrawText(x, y, text, size, r, g, b, 255 * alpha)
 end
 
-local function _DrawInfoRow(x, y, w, h, label, value, valueR, valueG, valueB, alpha)
-    local acR = Menu.Colors.Accent.r / 255.0
-    local acG = Menu.Colors.Accent.g / 255.0
-    local acB = Menu.Colors.Accent.b / 255.0
-
-    -- Misma estética BlackGlass del menú: negro transparente y acento cian.
-    Menu.DrawRoundedRect(x, y, w, h, 0, 0, 0, 58 * alpha, 4)
-    Menu.DrawRect(x, y + 4, 2, h - 8, acR, acG, acB, 145 * alpha)
-
+local function _DrawCleanInfoLine(x, y, w, label, value, valueR, valueG, valueB, alpha)
+    local labelSize = 12
+    local valueSize = 13
     _DrawTextShadow(
-        x + 11, y + h / 2 - 7,
-        label, 13,
+        x, y,
+        label, labelSize,
         Menu.Colors.TextDim.r / 255.0,
         Menu.Colors.TextDim.g / 255.0,
         Menu.Colors.TextDim.b / 255.0,
         alpha
     )
-
-    local valueSize = 14
-    local valueWidth = Susano.GetTextWidth and Susano.GetTextWidth(value, valueSize) or (string.len(value) * 7)
-    _DrawTextShadow(x + w - valueWidth - 11, y + h / 2 - 7, value, valueSize, valueR, valueG, valueB, alpha)
+    local valueWidth = Susano.GetTextWidth and Susano.GetTextWidth(value, valueSize) or (#value * 7)
+    _DrawTextShadow(x + w - valueWidth, y - 1, value, valueSize, valueR, valueG, valueB, alpha)
+    Menu.DrawRect(x, y + 20, w, 1, 255, 255, 255, 18 * alpha)
 end
 
 function Menu.DrawPlayerInfoPanel()
     Menu.UpdateHoveredPlayerInfo()
     local info = Menu.PlayerInfo
     local alpha = Menu.PlayerInfoAlpha or 0
-    if not info or alpha <= 0 then return end
+    if not info or alpha <= 0.01 then return end
 
     local p = Menu.GetScaledPosition()
     local scale = Menu.Scale or 1.0
-    local x = p.x + p.width + 14 * scale
-    local bannerHeight = (Menu.Banner and Menu.Banner.enabled and Menu.Banner.height or Menu.Position.headerHeight) * scale
-    local y = p.y + bannerHeight + 8 * scale
-    local w = 300 * scale
-    local playerBannerH = (Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled) and ((Menu.PlayerInfoBanner.height or 50) * scale) or 0
-    local gap = playerBannerH > 0 and (-1 * scale) or 0
-    local panelH = 194 * scale
+    local x = p.x + p.width + 12 * scale
+    local mainBannerH = (Menu.Banner and Menu.Banner.enabled and Menu.Banner.height or Menu.Position.headerHeight) * scale
+    local y = p.y + mainBannerH + 7 * scale
+    local w = 286 * scale
+    local bannerH = (Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled) and ((Menu.PlayerInfoBanner.height or 46) * scale) or (38 * scale)
+    local contentH = 158 * scale
+    local totalH = bannerH + contentH
 
     local acR = Menu.Colors.Accent.r / 255.0
     local acG = Menu.Colors.Accent.g / 255.0
     local acB = Menu.Colors.Accent.b / 255.0
-    local bgAlpha = (Menu.Colors.BgMain.a or 77) * alpha
+    local panelAlpha = math.min(215, (Menu.Colors.BgMain.a or 77) + 105) * alpha
 
-    -- Sombra exterior discreta.
-    Menu.DrawRoundedRect(x + 4 * scale, y + 5 * scale, w, playerBannerH + gap + panelH, 0, 0, 0, 95 * alpha, 8 * scale)
+    -- Un único contenedor: evita la sensación de dos paneles superpuestos.
+    Menu.DrawRoundedRect(x, y, w, totalH, 0, 0, 0, panelAlpha, 7 * scale)
+    Menu.DrawRect(x, y, w, 2 * scale, acR, acG, acB, 220 * alpha)
+    Menu.DrawRect(x, y + totalH - 1 * scale, w, 1 * scale, acR, acG, acB, 75 * alpha)
 
-    -- Banner idéntico en integración al banner principal.
-    if playerBannerH > 0 then
+    if bannerH > 0 then
         if Menu.playerInfoBannerTexture and Menu.playerInfoBannerTexture > 0 and Susano.DrawImage then
-            Susano.DrawImage(Menu.playerInfoBannerTexture, x, y, w, playerBannerH, 1, 1, 1, 1.0 * alpha, 0)
+            Susano.DrawImage(Menu.playerInfoBannerTexture, x + 1 * scale, y + 2 * scale, w - 2 * scale, bannerH - 2 * scale,
+                1, 1, 1, 0.88 * alpha * (Menu.RenderAlpha or 1.0), 0)
+            -- Fundido inferior para integrar la imagen con el cuerpo, sin segundo recuadro.
+            local fadeSteps = 9
+            local fadeH = 20 * scale
+            for i = 0, fadeSteps - 1 do
+                local fy = y + bannerH - fadeH + (i * fadeH / fadeSteps)
+                Menu.DrawRect(x + 1 * scale, fy, w - 2 * scale, fadeH / fadeSteps + 1,
+                    0, 0, 0, (22 + i * 15) * alpha)
+            end
         else
-            Menu.DrawRoundedRect(x, y, w, playerBannerH, 0, 0, 0, bgAlpha, 7 * scale)
-            Menu.DrawRect(x, y + playerBannerH - 2 * scale, w, 2 * scale, acR, acG, acB, 185 * alpha)
             local title = "PLAYER INFO"
-            local titleSize = 18
-            local titleWidth = Susano.GetTextWidth and Susano.GetTextWidth(title, titleSize) or (string.len(title) * 9)
-            _DrawTextShadow(x + w / 2 - titleWidth / 2, y + playerBannerH / 2 - 9 * scale, title, titleSize, acR, acG, acB, alpha)
+            local titleSize = 16
+            local tw = Susano.GetTextWidth and Susano.GetTextWidth(title, titleSize) or (#title * 8)
+            _DrawTextShadow(x + w / 2 - tw / 2, y + bannerH / 2 - 8 * scale, title, titleSize, acR, acG, acB, alpha)
         end
+        Menu.DrawRect(x + 10 * scale, y + bannerH - 1 * scale, w - 20 * scale, 1 * scale, acR, acG, acB, 120 * alpha)
     end
 
-    local panelY = y + playerBannerH + gap
+    Menu.DrawPanelSnow(Menu.PlayerInfoParticles, x + 4 * scale, y + 4 * scale, w - 8 * scale, totalH - 8 * scale, alpha * 0.82, 0.88)
 
-    -- Exactamente el fondo BlackGlass del menú, sin la antigua capa azul oscuro.
-    Menu.DrawRoundedRect(x, panelY, w, panelH, 0, 0, 0, bgAlpha, 8 * scale)
-    Menu.DrawRect(x, panelY, w, 2 * scale, acR, acG, acB, 190 * alpha)
-    Menu.DrawRect(x, panelY + panelH - 1 * scale, w, 1 * scale, acR, acG, acB, 85 * alpha)
-    Menu.DrawRect(x, panelY + 1 * scale, 1 * scale, panelH - 2 * scale, acR, acG, acB, 75 * alpha)
-    Menu.DrawRect(x + w - 1 * scale, panelY + 1 * scale, 1 * scale, panelH - 2 * scale, acR, acG, acB, 75 * alpha)
-
-    -- Los copos se dibujan sobre el fondo y detrás del contenido.
-    Menu.DrawPanelSnow(Menu.PlayerInfoParticles, x + 3 * scale, panelY + 3 * scale, w - 6 * scale, panelH - 6 * scale, alpha, 1.0)
-
-    -- Cabecera del jugador con la misma selección cian del menú.
-    local nameBoxX = x + 12 * scale
-    local nameBoxY = panelY + 12 * scale
-    local nameBoxW = w - 24 * scale
-    local nameBoxH = 38 * scale
-    Menu.DrawRoundedRect(nameBoxX, nameBoxY, nameBoxW, nameBoxH, acR, acG, acB, 44 * alpha, 5 * scale)
-    Menu.DrawRect(nameBoxX, nameBoxY + nameBoxH - 1 * scale, nameBoxW, 1 * scale, acR, acG, acB, 100 * alpha)
+    local contentY = y + bannerH
+    local left = x + 15 * scale
+    local innerW = w - 30 * scale
 
     local displayName = tostring(info.name or "Jugador")
-    if #displayName > 28 then displayName = string.sub(displayName, 1, 26) .. ".." end
-    _DrawTextShadow(nameBoxX + 12 * scale, nameBoxY + nameBoxH / 2 - 10 * scale, displayName, 20, 1, 1, 1, alpha)
+    if #displayName > 27 then displayName = string.sub(displayName, 1, 25) .. ".." end
 
-    local rowX = x + 12 * scale
-    local rowW = w - 24 * scale
-    local rowH = 27 * scale
-    local rowY = panelY + 58 * scale
-    local rowGap = 4 * scale
+    Menu.DrawRoundedRect(left, contentY + 11 * scale, 4 * scale, 25 * scale, acR, acG, acB, 230 * alpha, 2 * scale)
+    _DrawTextShadow(left + 12 * scale, contentY + 12 * scale, displayName, 18, 1, 1, 1, alpha)
 
-    _DrawInfoRow(rowX, rowY, rowW, rowH, "ID servidor", tostring(info.serverId or 0), 1, 1, 1, alpha)
-    rowY = rowY + rowH + rowGap
-    _DrawInfoRow(rowX, rowY, rowW, rowH, "ID local", tostring(info.localId or 0), 1, 1, 1, alpha)
-    rowY = rowY + rowH + rowGap
-    _DrawInfoRow(rowX, rowY, rowW, rowH, "Distancia", string.format("%.1f m", info.distance or 0), 1, 1, 1, alpha)
-    rowY = rowY + rowH + rowGap
+    local status = "EN LINEA"
+    local statusSize = 9
+    local statusW = Susano.GetTextWidth and Susano.GetTextWidth(status, statusSize) or (#status * 5)
+    Menu.DrawText(x + w - statusW - 14 * scale, contentY + 17 * scale, status, statusSize, acR, acG, acB, 225 * alpha)
 
-    local weaponText = info.hasWeapon and ("SI  0x" .. string.format("%X", tonumber(info.weaponHash) or 0)) or "NO"
-    local wr, wg, wb = 0.58, 1.0, 0.72
-    if info.hasWeapon then wr, wg, wb = 1.0, 0.84, 0.30 end
-    _DrawInfoRow(rowX, rowY, rowW, rowH, "Arma en mano", weaponText, wr, wg, wb, alpha)
+    local rowY = contentY + 49 * scale
+    local rowStep = 27 * scale
+    _DrawCleanInfoLine(left, rowY, innerW, "ID servidor", tostring(info.serverId or 0), 1, 1, 1, alpha)
+    rowY = rowY + rowStep
+    _DrawCleanInfoLine(left, rowY, innerW, "ID local", tostring(info.localId or 0), 1, 1, 1, alpha)
+    rowY = rowY + rowStep
+    _DrawCleanInfoLine(left, rowY, innerW, "Distancia", string.format("%.1f m", info.distance or 0), 1, 1, 1, alpha)
+    rowY = rowY + rowStep
+
+    local weaponText = info.hasWeapon and ("ARMADO  0x" .. string.format("%X", tonumber(info.weaponHash) or 0)) or "SIN ARMA"
+    local wr, wg, wb = 0.55, 1.0, 0.72
+    if info.hasWeapon then wr, wg, wb = 1.0, 0.78, 0.28 end
+    _DrawCleanInfoLine(left, rowY, innerW, "Estado", weaponText, wr, wg, wb, alpha)
 end
 
 function Menu.DrawLoadedNotice()
@@ -1676,7 +1747,18 @@ function Menu.Render()
     if Menu.TopLevelTabs and (not Menu.Categories or #Menu.Categories <= 1) then Menu.UpdateCategoriesFromTopTab() end
     if not Susano.BeginFrame then return end
     local dt = GetFrameTime and GetFrameTime() or 0.016
-    local anim = 5.0 * dt
+    Menu.FrameDelta = math.max(0.001, math.min(0.05, dt))
+    local anim = 5.0 * Menu.FrameDelta
+
+    Menu.MenuAlpha = Menu.ExpApproach(Menu.MenuAlpha or 0.0, Menu.Visible and 1.0 or 0.0, Menu.Visible and 12.0 or 15.0)
+    local contentState = tostring(Menu.CurrentTopTab or 1) .. ":" .. tostring(Menu.OpenedCategory or 0) .. ":" .. tostring(Menu.CurrentTab or 1)
+    if Menu.LastContentState ~= contentState then
+        Menu.LastContentState = contentState
+        Menu.ContentAlpha = 0.30
+        Menu.ContentSlideY = 6.0 * (Menu.Scale or 1.0)
+    end
+    Menu.ContentAlpha = Menu.ExpApproach(Menu.ContentAlpha or 1.0, 1.0, 13.0)
+    Menu.ContentSlideY = Menu.ExpApproach(Menu.ContentSlideY or 0.0, 0.0, 12.0)
     if Menu.IsLoading then
         Menu.LoadingBarAlpha = math.min(1, Menu.LoadingBarAlpha + anim)
     else
@@ -1694,23 +1776,35 @@ function Menu.Render()
     end
     Susano.BeginFrame()
     if Menu.KeybindsInterfaceAlpha > 0 then Menu.DrawKeybindsInterface(Menu.KeybindsInterfaceAlpha) end
-    if Menu.Visible then
+    if (Menu.MenuAlpha or 0) > 0.01 then
         if Menu.EditorMode and Susano.EnableOverlay then Susano.EnableOverlay(true)
         elseif not Menu.EditorMode and Susano.EnableOverlay then Susano.EnableOverlay(false) end
+
+        local originalY = Menu.Position.y
+        Menu.Position.y = originalY + (1.0 - Menu.MenuAlpha) * 7.0
+        Menu.RenderAlpha = Menu.MenuAlpha
         Menu.DrawBackground()
         Menu.DrawHeader()
+
+        local baseAlpha = Menu.RenderAlpha
+        Menu.RenderAlpha = baseAlpha * (Menu.ContentAlpha or 1.0)
         Menu.DrawCategories()
+        Menu.RenderAlpha = baseAlpha
+
         Menu.DrawFooter()
         Menu.DrawPlayerInfoPanel()
         Menu.DrawAnticheatPanel()
+        Menu.RenderAlpha = 1.0
+        Menu.Position.y = originalY
     end
+    Menu.RenderAlpha = 1.0
     if Menu.InputOpen then Menu.DrawInputWindow() end
     if Menu.LoadingBarAlpha > 0 then Menu.DrawLoadingBar(Menu.LoadingBarAlpha) end
     Menu.DrawLoadedNotice()
     if Menu.KeySelectorAlpha > 0 then Menu.DrawKeySelector(Menu.KeySelectorAlpha) end
     if Menu.OnRender then pcall(Menu.OnRender) end
     if Susano.SubmitFrame then Susano.SubmitFrame() end
-    if not Menu.Visible and not Menu.ShowKeybinds and Menu.LoadingBarAlpha<=0 and Menu.KeySelectorAlpha<=0 and not Menu.LoadedNoticeActive then
+    if (Menu.MenuAlpha or 0) <= 0.01 and not Menu.ShowKeybinds and Menu.LoadingBarAlpha<=0 and Menu.KeySelectorAlpha<=0 and not Menu.LoadedNoticeActive then
         if Susano.ResetFrame and not Menu.PreventResetFrame then Susano.ResetFrame() end
     end
 end
@@ -1807,26 +1901,64 @@ if Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled and Menu.PlayerInfoBa
 end
 Menu.ApplyTheme("BlackGlass")
 
--- Valores por defecto (fondo negro ya está, nieve activada)
-CreateThread(function()
-    while not Menu.Categories do Wait(100) end
-    Wait(500)
-    for _,cat in SafeIpairs(Menu.Categories) do
+local function _AttachVisualSettings(categories)
+    for _, cat in SafeIpairs(categories) do
         if cat.name == "Ajustes" and cat.tabs then
-            for _,tab in SafeIpairs(cat.tabs) do
+            for _, tab in SafeIpairs(cat.tabs) do
                 if tab.name == "General" and tab.items then
-                    for _,it in SafeIpairs(tab.items) do
+                    local colorItemFound = false
+                    for _, it in SafeIpairs(tab.items) do
                         if it.name == "Fondo negro" and it.type == "toggle" then
-                            it.value = true   -- ahora el fondo ya es negro, no hace falta este toggle, pero lo dejamos
-                        end
-                        if it.name == "Copos de nieve" and it.type == "toggle" then
+                            it.value = true
+                        elseif it.name == "Copos de nieve" and it.type == "toggle" then
                             it.value = true
                             Menu.ShowSnowflakes = true
+                        elseif it.name == "Color del menu" or it.name == "Color del menú" then
+                            colorItemFound = true
+                            it.options = Menu.AccentPresetOrder
+                            it.onClick = function(index, option)
+                                Menu.ApplyAccentPreset(option or Menu.AccentPresetOrder[index] or "Cian")
+                            end
                         end
+                    end
+
+                    if not colorItemFound then
+                        local selectedColor = 1
+                        for index, colorName in ipairs(Menu.AccentPresetOrder) do
+                            if colorName == Menu.CurrentAccentName then
+                                selectedColor = index
+                                break
+                            end
+                        end
+                        table.insert(tab.items, {
+                            name = "Color del menu",
+                            type = "selector",
+                            options = Menu.AccentPresetOrder,
+                            selected = selectedColor,
+                            onClick = function(index, option)
+                                Menu.ApplyAccentPreset(option or Menu.AccentPresetOrder[index] or "Cian")
+                            end
+                        })
                     end
                 end
             end
         end
+    end
+end
+
+function Menu.EnsureVisualSettings()
+    _AttachVisualSettings(Menu.Categories)
+    for _, topTab in SafeIpairs(Menu.TopLevelTabs) do
+        _AttachVisualSettings(topTab.categories)
+    end
+end
+
+-- Inserta el selector aunque Ajustes se encuentre en otra pestaña superior.
+CreateThread(function()
+    while not Menu.Categories and not Menu.TopLevelTabs do Wait(100) end
+    for _ = 1, 8 do
+        Menu.EnsureVisualSettings()
+        Wait(500)
     end
 end)
 
