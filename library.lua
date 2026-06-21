@@ -1592,7 +1592,7 @@ local function _CreatePanelSnow(count)
     return particles
 end
 
-Menu.PlayerInfoParticles = Menu.PlayerInfoParticles or _CreatePanelSnow(42)
+Menu.PlayerInfoParticles = Menu.PlayerInfoParticles or _CreatePanelSnow(26)
 Menu.LoadedNoticeParticles = Menu.LoadedNoticeParticles or _CreatePanelSnow(34)
 
 function Menu.DrawPanelSnow(particles, x, y, w, h, alpha, speedMultiplier)
@@ -1627,30 +1627,42 @@ local function _DrawTextShadow(x, y, text, size, r, g, b, alpha)
     Menu.DrawText(x, y, text, size, r, g, b, 255 * alpha)
 end
 
-local function _DrawPlayerInfoRow(x, y, w, h, label, value, valueR, valueG, valueB, alpha)
+local function _CompactText(text, maxChars)
+    text = tostring(text or "-")
+    maxChars = maxChars or 14
+    if #text > maxChars then
+        return string.sub(text, 1, math.max(1, maxChars - 2)) .. ".."
+    end
+    return text
+end
+
+local function _DrawCompactStatCard(x, y, w, h, label, value, valueR, valueG, valueB, alpha)
     local acR = Menu.Colors.Accent.r / 255.0
     local acG = Menu.Colors.Accent.g / 255.0
     local acB = Menu.Colors.Accent.b / 255.0
 
-    -- Fila de cristal muy sutil. No crea un segundo panel visual.
-    Menu.DrawRoundedRect(x, y, w, h, 255, 255, 255, 10 * alpha, 4)
-    Menu.DrawRect(x, y + h - 1, w, 1, 255, 255, 255, 12 * alpha)
-    Menu.DrawRoundedRect(x + 8, y + h / 2 - 2, 4, 4, acR, acG, acB, 205 * alpha, 2)
+    -- Tarjeta ligera: una sola capa, sin líneas largas ni cajas superpuestas.
+    Menu.DrawRoundedRect(x, y, w, h, 255, 255, 255, 8 * alpha, 5)
+    Menu.DrawRect(x + 8, y + 5, 18, 1, acR, acG, acB, 175 * alpha)
 
-    local labelSize = 13
-    local valueSize = 14
-    _DrawTextShadow(
-        x + 20, y + h / 2 - 7,
-        label, labelSize,
+    local labelText = _CompactText(string.upper(label or ""), 18)
+    local valueText = _CompactText(value, 16)
+
+    Menu.DrawText(
+        x + 8, y + 8,
+        labelText, 10,
         Menu.Colors.TextDim.r / 255.0,
         Menu.Colors.TextDim.g / 255.0,
         Menu.Colors.TextDim.b / 255.0,
-        alpha
+        210 * alpha
     )
 
-    value = tostring(value or "-")
-    local valueWidth = Susano.GetTextWidth and Susano.GetTextWidth(value, valueSize) or (#value * 7)
-    _DrawTextShadow(x + w - valueWidth - 12, y + h / 2 - 8, value, valueSize, valueR, valueG, valueB, alpha)
+    _DrawTextShadow(
+        x + 8, y + 20,
+        valueText, 13,
+        valueR, valueG, valueB,
+        alpha
+    )
 end
 
 function Menu.DrawPlayerInfoPanel()
@@ -1661,87 +1673,116 @@ function Menu.DrawPlayerInfoPanel()
 
     local p = Menu.GetScaledPosition()
     local scale = Menu.Scale or 1.0
-    local x = p.x + p.width + 14 * scale
+    local x = p.x + p.width + 12 * scale
     local mainBannerH = (Menu.Banner and Menu.Banner.enabled and Menu.Banner.height or Menu.Position.headerHeight) * scale
     local y = p.y + mainBannerH + 8 * scale
-    local w = 304 * scale
-    local bannerH = (Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled) and ((Menu.PlayerInfoBanner.height or 46) * scale) or (42 * scale)
-    local bodyH = 194 * scale
+
+    -- Formato compacto: aproximadamente un 18% menos ancho y un 32% menos alto.
+    local w = 248 * scale
+    local bannerH = 34 * scale
+    local bodyH = 128 * scale
     local totalH = bannerH + bodyH
 
     local acR = Menu.Colors.Accent.r / 255.0
     local acG = Menu.Colors.Accent.g / 255.0
     local acB = Menu.Colors.Accent.b / 255.0
-    local cardAlpha = math.min(220, (Menu.Colors.BgMain.a or 77) + 120) * alpha
+    local cardAlpha = math.min(218, (Menu.Colors.BgMain.a or 77) + 118) * alpha
 
-    -- Una única tarjeta con una sola sombra y un solo borde exterior.
-    Menu.DrawRoundedRect(x + 4 * scale, y + 5 * scale, w, totalH, 0, 0, 0, 70 * alpha, 9 * scale)
-    Menu.DrawRoundedRect(x, y, w, totalH, 0, 0, 0, cardAlpha, 8 * scale)
-    Menu.DrawRect(x, y, w, 2 * scale, acR, acG, acB, 225 * alpha)
-    Menu.DrawRect(x, y + totalH - 1 * scale, w, 1 * scale, acR, acG, acB, 70 * alpha)
+    -- Una sola tarjeta y una sombra muy contenida.
+    Menu.DrawRoundedRect(x + 3 * scale, y + 4 * scale, w, totalH, 0, 0, 0, 58 * alpha, 8 * scale)
+    Menu.DrawRoundedRect(x, y, w, totalH, 0, 0, 0, cardAlpha, 7 * scale)
+    Menu.DrawRect(x + 9 * scale, y, 48 * scale, 2 * scale, acR, acG, acB, 230 * alpha)
 
-    -- Banner integrado dentro de la misma tarjeta.
+    -- Banner reducido e integrado en la misma tarjeta.
     if Menu.playerInfoBannerTexture and Menu.playerInfoBannerTexture > 0 and Susano.DrawImage then
         Susano.DrawImage(
             Menu.playerInfoBannerTexture,
-            x + 1 * scale, y + 2 * scale,
+            x + 1 * scale, y + 1 * scale,
             w - 2 * scale, bannerH,
-            1, 1, 1, 0.92 * alpha * (Menu.RenderAlpha or 1.0), 0
+            1, 1, 1, 0.88 * alpha * (Menu.RenderAlpha or 1.0), 0
         )
 
-        -- Degradado suave para unir banner y contenido sin corte ni recuadro doble.
-        local fadeH = 22 * scale
-        local steps = 11
+        local fadeH = 14 * scale
+        local steps = 7
         for i = 0, steps - 1 do
             local fy = y + bannerH - fadeH + (i * fadeH / steps)
-            Menu.DrawRect(x + 1 * scale, fy, w - 2 * scale, fadeH / steps + 1,
-                0, 0, 0, (18 + i * 12) * alpha)
+            Menu.DrawRect(
+                x + 1 * scale, fy,
+                w - 2 * scale, fadeH / steps + 1,
+                0, 0, 0, (24 + i * 16) * alpha
+            )
         end
     else
         local title = "PLAYER INFO"
-        local titleSize = 17
-        local titleW = Susano.GetTextWidth and Susano.GetTextWidth(title, titleSize) or (#title * 9)
-        _DrawTextShadow(x + w / 2 - titleW / 2, y + bannerH / 2 - 9 * scale, title, titleSize, acR, acG, acB, alpha)
+        local titleSize = 14
+        local titleW = Susano.GetTextWidth and Susano.GetTextWidth(title, titleSize) or (#title * 7)
+        _DrawTextShadow(x + w / 2 - titleW / 2, y + 9 * scale, title, titleSize, acR, acG, acB, alpha)
     end
 
     local bodyY = y + bannerH
-    Menu.DrawPanelSnow(Menu.PlayerInfoParticles, x + 5 * scale, bodyY + 3 * scale, w - 10 * scale, bodyH - 8 * scale, alpha * 0.78, 0.82)
+    Menu.DrawPanelSnow(
+        Menu.PlayerInfoParticles,
+        x + 5 * scale, bodyY + 2 * scale,
+        w - 10 * scale, bodyH - 5 * scale,
+        alpha * 0.58, 0.72
+    )
 
-    local left = x + 14 * scale
-    local innerW = w - 28 * scale
-    local displayName = tostring(info.name or "Jugador")
-    if #displayName > 29 then displayName = string.sub(displayName, 1, 27) .. ".." end
+    local pad = 10 * scale
+    local left = x + pad
+    local innerW = w - pad * 2
+    local displayName = _CompactText(info.name or "Jugador", 23)
 
-    -- Cabecera limpia: sin caja interna grande, solo jerarquía y una línea de acento.
-    Menu.DrawRoundedRect(left, bodyY + 13 * scale, 4 * scale, 30 * scale, acR, acG, acB, 230 * alpha, 2 * scale)
-    _DrawTextShadow(left + 13 * scale, bodyY + 13 * scale, displayName, 20, 1, 1, 1, alpha)
+    -- Cabecera compacta, sin recuadro interno adicional.
+    Menu.DrawRoundedRect(left, bodyY + 9 * scale, 3 * scale, 22 * scale, acR, acG, acB, 220 * alpha, 2 * scale)
+    _DrawTextShadow(left + 10 * scale, bodyY + 8 * scale, displayName, 17, 1, 1, 1, alpha)
 
-    local status = "EN LINEA"
-    local statusSize = 10
-    local statusW = Susano.GetTextWidth and Susano.GetTextWidth(status, statusSize) or (#status * 5)
-    Menu.DrawRoundedRect(x + w - statusW - 27 * scale, bodyY + 17 * scale, statusW + 14 * scale, 18 * scale,
-        acR, acG, acB, 32 * alpha, 9 * scale)
-    Menu.DrawText(x + w - statusW - 20 * scale, bodyY + 20 * scale, status, statusSize, acR, acG, acB, 235 * alpha)
+    local onlineText = "ONLINE"
+    local onlineSize = 9
+    local onlineW = Susano.GetTextWidth and Susano.GetTextWidth(onlineText, onlineSize) or (#onlineText * 5)
+    local onlineX = x + w - onlineW - 14 * scale
+    Menu.DrawRoundedRect(onlineX - 8 * scale, bodyY + 11 * scale, onlineW + 12 * scale, 16 * scale, acR, acG, acB, 24 * alpha, 8 * scale)
+    Menu.DrawRoundedRect(onlineX - 4 * scale, bodyY + 17 * scale, 3 * scale, 3 * scale, acR, acG, acB, 235 * alpha, 2 * scale)
+    Menu.DrawText(onlineX + 2 * scale, bodyY + 13 * scale, onlineText, onlineSize, acR, acG, acB, 225 * alpha)
 
-    Menu.DrawRect(left, bodyY + 49 * scale, innerW, 1 * scale, 255, 255, 255, 20 * alpha)
+    -- Línea corta decorativa en lugar de un separador de ancho completo.
+    Menu.DrawRect(left + 10 * scale, bodyY + 34 * scale, 64 * scale, 1, acR, acG, acB, 85 * alpha)
 
-    local rowX = left
-    local rowW = innerW
-    local rowH = 29 * scale
-    local rowGap = 3 * scale
-    local rowY = bodyY + 58 * scale
+    local gap = 6 * scale
+    local cardW = (innerW - gap) / 2
+    local cardH = 36 * scale
+    local row1Y = bodyY + 41 * scale
+    local row2Y = row1Y + cardH + 5 * scale
 
-    _DrawPlayerInfoRow(rowX, rowY, rowW, rowH, "ID servidor", tostring(info.serverId or 0), 1, 1, 1, alpha)
-    rowY = rowY + rowH + rowGap
-    _DrawPlayerInfoRow(rowX, rowY, rowW, rowH, "ID local", tostring(info.localId or 0), 1, 1, 1, alpha)
-    rowY = rowY + rowH + rowGap
-    _DrawPlayerInfoRow(rowX, rowY, rowW, rowH, "Distancia", string.format("%.1f m", info.distance or 0), 1, 1, 1, alpha)
-    rowY = rowY + rowH + rowGap
+    _DrawCompactStatCard(
+        left, row1Y, cardW, cardH,
+        "ID servidor", tostring(info.serverId or 0),
+        1, 1, 1, alpha
+    )
+    _DrawCompactStatCard(
+        left + cardW + gap, row1Y, cardW, cardH,
+        "ID local", tostring(info.localId or 0),
+        1, 1, 1, alpha
+    )
+    _DrawCompactStatCard(
+        left, row2Y, cardW, cardH,
+        "Distancia", string.format("%.1f m", info.distance or 0),
+        1, 1, 1, alpha
+    )
 
-    local weaponText = info.hasWeapon and ("ARMADO  0x" .. string.format("%X", tonumber(info.weaponHash) or 0)) or "SIN ARMA"
+    local weaponLabel = "Estado"
+    local weaponValue = info.hasWeapon and "ARMADO" or "SIN ARMA"
+    if info.hasWeapon then
+        local compactHash = tonumber(info.weaponHash) or 0
+        weaponLabel = string.format("Arma %04X", compactHash % 65536)
+    end
     local wr, wg, wb = 0.55, 1.0, 0.72
     if info.hasWeapon then wr, wg, wb = 1.0, 0.78, 0.28 end
-    _DrawPlayerInfoRow(rowX, rowY, rowW, rowH, "Estado", weaponText, wr, wg, wb, alpha)
+
+    _DrawCompactStatCard(
+        left + cardW + gap, row2Y, cardW, cardH,
+        weaponLabel, weaponValue,
+        wr, wg, wb, alpha
+    )
 end
 
 function Menu.DrawLoadedNotice()
