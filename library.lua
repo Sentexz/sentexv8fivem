@@ -34,9 +34,9 @@ Menu.LoadingStartTime = nil
 Menu.LoadingDuration = 3000
 
 Menu.SelectingKey = false -- selector inicial eliminado
-Menu.MenuToggleKey = 0x22 -- PG DN / Page Down
-Menu.MenuToggleKeyName = "PG DN"
-Menu.MenuToggleControl = 11
+Menu.MenuToggleKey = 0x4E -- N
+Menu.MenuToggleKeyName = "N"
+Menu.MenuToggleControl = 249
 Menu.PreventResetFrame = true
 
 Menu.SelectingBind = false
@@ -927,23 +927,22 @@ Menu.KeyNames = {
 function Menu.GetKeyName(k) return Menu.KeyNames[k] or ("0x"..string.format("%02X",k)) end
 
 function Menu.GetMenuToggleKeyName()
-    return Menu.MenuToggleKeyName or Menu.GetKeyName(Menu.MenuToggleKey or 0x22)
+    return Menu.MenuToggleKeyName or Menu.GetKeyName(Menu.MenuToggleKey or 0x4E)
 end
 
--- Susano/FiveM: Page Down no siempre entra bien por VK 0x22 con GetAsyncKeyState.
--- En el menú viejo funcionaba así: IsDisabledControlJustReleased(0, 11).
+-- Susano/FiveM: tecla fija N.
+-- FiveM suele mapear N como control 249; Susano puede exponerlo también por VK 0x4E.
 function Menu.IsMenuToggleJustReleased()
-    -- Page Down / PG DN en FiveM suele ser control 11.
-    -- Lo comprobamos por varias rutas porque Susano puede ejecutar con controles normales, disabled o VK.
-    local control = Menu.MenuToggleControl or 11
+    local control = Menu.MenuToggleControl or 249
 
+    -- Rutas FiveM/GTA: probamos released y pressed para builds que no disparan una de las dos.
     if IsDisabledControlJustReleased and IsDisabledControlJustReleased(0, control) then return true end
     if IsControlJustReleased and IsControlJustReleased(0, control) then return true end
     if IsDisabledControlJustPressed and IsDisabledControlJustPressed(0, control) then return true end
     if IsControlJustPressed and IsControlJustPressed(0, control) then return true end
 
-    -- Fallback por VK por si la build de Susano no expone controles de FiveM.
-    if Menu.IsKeyJustPressed and Menu.IsKeyJustPressed(Menu.MenuToggleKey or 0x22) then return true end
+    -- Fallback Windows/Susano.
+    if Menu.IsKeyJustPressed and Menu.IsKeyJustPressed(Menu.MenuToggleKey or 0x4E) then return true end
 
     return false
 end
@@ -1002,8 +1001,7 @@ function Menu.HandleInput()
         end
     end
 
-    -- Tecla para mostrar/ocultar menú: PG DN / Page Down.
-    -- Usamos el control 11 porque en Susano/FiveM funciona mejor que VK 0x22.
+    -- Tecla para mostrar/ocultar menú: N.
     if Menu.IsMenuToggleJustReleased() then
         Menu.Visible = not Menu.Visible
         if Menu.Visible then
@@ -1488,15 +1486,15 @@ function Menu.DrawPlayerInfoPanel()
 end
 
 -- =====================================================
--- SAFE HOOK INTO RENDER + BOOT FLOW FIXED / PG DN ONLY
+-- SAFE HOOK INTO RENDER + BOOT FLOW FIXED / N ONLY
 -- =====================================================
 
 Menu.SelectingKey = false
 Menu.SelectingBind = false
 Menu.KeySelectorAlpha = 0.0
-Menu.MenuToggleKey = 0x22 -- Page Down / PG DN
-Menu.MenuToggleKeyName = "PG DN"
-Menu.MenuToggleControl = 11
+Menu.MenuToggleKey = 0x4E -- N
+Menu.MenuToggleKeyName = "N"
+Menu.MenuToggleControl = 249
 
 function Menu.UpdateLoadingState()
     if Menu.LoadingComplete then
@@ -1574,6 +1572,14 @@ function Menu.Render()
     if not Menu.Visible and not Menu.ShowKeybinds and not Menu.IsLoading then
         if Susano.ResetFrame and not Menu.PreventResetFrame then Susano.ResetFrame() end
     end
+end
+
+
+-- Compatibilidad con loaders que esperan Menu.OnRender.
+-- No cambia el loader: solo expone el render/input de la librería por el nombre estándar.
+Menu.OnRender = function()
+    if Menu.Render then Menu.Render() end
+    if Menu.LoadingComplete and Menu.HandleInput then Menu.HandleInput() end
 end
 
 return Menu
