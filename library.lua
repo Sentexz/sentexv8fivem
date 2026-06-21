@@ -21,7 +21,11 @@ Menu.SelectorY = 0
 Menu.CategorySelectorY = 0
 Menu.TabSelectorX = 0
 Menu.TabSelectorWidth = 0
-Menu.SmoothFactor = 0.15
+Menu.SmoothFactor = 0.22
+Menu.VisualSmoothFactor = 0.20
+Menu.ScrollbarThumbY = 0
+Menu.PlayerInfoAlpha = 0.0
+Menu.PlayerInfo = nil
 Menu.GradientType = 1
 Menu.ScrollbarPosition = 1
 
@@ -101,7 +105,7 @@ Menu.Position = {
     mainMenuSpacing = 5,
     footerRadius = 4,
     itemRadius = 4,
-    scrollbarWidth = 4,
+    scrollbarWidth = 7,
     scrollbarPadding = 4,
     headerRadius = 6,
     anticheatPanelHeight = 0,
@@ -230,26 +234,60 @@ end
 function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems, isMainMenu, menuWidth)
     if totalItems < 1 then return end
     local p = Menu.GetScaledPosition()
-    local sbW = p.scrollbarWidth
-    local pad = p.scrollbarPadding
+    local scale = Menu.Scale or 1.0
     local width = menuWidth or p.width
-    local sbX = (Menu.ScrollbarPosition == 2) and (x + width + pad) or (x - sbW - pad)
+
+    -- Siempre a la izquierda del menú, como pediste.
+    local railW = math.max(7, p.scrollbarWidth)
+    local capH = 18 * scale
+    local gap = 9 * scale
+    local sbX = x - railW - gap
     local sbY = startY
     local sbH = visibleHeight
+
+    if sbH <= 0 then return end
+
+    -- Cápsulas superior/inferior con flechas decorativas.
+    local acR, acG, acB = Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0
+    local dimR, dimG, dimB = Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0
+
+    Menu.DrawRoundedRect(sbX-4*scale, sbY-capH-5*scale, railW+8*scale, capH, 0,0,0, 170, 5*scale)
+    Menu.DrawRoundedRect(sbX-2*scale, sbY-capH-3*scale, railW+4*scale, capH-4*scale, 12,18,28, 210, 4*scale)
+    Menu.DrawText(sbX-2*scale, sbY-capH-3*scale, "▲", 13, acR, acG, acB, 230)
+
+    Menu.DrawRoundedRect(sbX-4*scale, sbY+sbH+5*scale, railW+8*scale, capH, 0,0,0, 170, 5*scale)
+    Menu.DrawRoundedRect(sbX-2*scale, sbY+sbH+7*scale, railW+4*scale, capH-4*scale, 12,18,28, 210, 4*scale)
+    Menu.DrawText(sbX-2*scale, sbY+sbH+7*scale, "▼", 13, acR, acG, acB, 230)
+
+    -- Rail con glow suave.
+    Menu.DrawRoundedRect(sbX-2*scale, sbY, railW+4*scale, sbH, 0,0,0, 135, railW)
+    Menu.DrawRoundedRect(sbX, sbY+2*scale, railW, sbH-4*scale, 18,24,38, 185, railW)
+    Menu.DrawRect(sbX + railW/2, sbY+8*scale, 1, math.max(0, sbH-16*scale), dimR, dimG, dimB, 45)
+
     local thumbH = sbH
-    local thumbY = sbY
+    local targetY = sbY
     if totalItems > Menu.ItemsPerPage then
         local scrollOffset = isMainMenu and Menu.CategoryScrollOffset or Menu.ItemScrollOffset
         local totalScroll = totalItems - Menu.ItemsPerPage
         local progress = scrollOffset / math.max(1, totalScroll)
         progress = math.min(1, math.max(0, progress))
-        thumbH = math.max(16, sbH * (Menu.ItemsPerPage / totalItems))
-        thumbY = sbY + progress * (sbH - thumbH)
-        thumbY = math.max(sbY, math.min(sbY+sbH-thumbH, thumbY))
+        thumbH = math.max(24*scale, sbH * (Menu.ItemsPerPage / totalItems))
+        targetY = sbY + progress * (sbH - thumbH)
+        targetY = math.max(sbY, math.min(sbY+sbH-thumbH, targetY))
     end
-    Menu.DrawRect(sbX, sbY, sbW, sbH, 40,50,80, 80)
-    local acR, acG, acB = Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0
-    Menu.DrawRoundedRect(sbX, thumbY, sbW, thumbH, acR, acG, acB, 220, sbW/2)
+
+    local key = isMainMenu and "cat" or "item"
+    Menu.ScrollbarThumbY = Menu.ScrollbarThumbY or {}
+    if not Menu.ScrollbarThumbY[key] or Menu.ScrollbarThumbY[key] == 0 then
+        Menu.ScrollbarThumbY[key] = targetY
+    end
+    Menu.ScrollbarThumbY[key] = Menu.ScrollbarThumbY[key] + (targetY - Menu.ScrollbarThumbY[key]) * (Menu.VisualSmoothFactor or 0.20)
+    local thumbY = Menu.ScrollbarThumbY[key]
+
+    -- Thumb premium con doble capa.
+    Menu.DrawRoundedRect(sbX-3*scale, thumbY-1*scale, railW+6*scale, thumbH+2*scale, acR, acG, acB, 70, railW)
+    Menu.DrawRoundedRect(sbX-1*scale, thumbY, railW+2*scale, thumbH, acR, acG, acB, 225, railW)
+    Menu.DrawRoundedRect(sbX+2*scale, thumbY+4*scale, math.max(2, railW-4*scale), math.max(4, thumbH-8*scale), 255,255,255, 38, railW)
 end
 
 -- Pestañas
@@ -1247,6 +1285,158 @@ function Menu.LoadBannerTexture(url)
     end)
 end
 
+
+function Menu.GetCurrentSelectedItem()
+    if not Menu.Categories then return nil, nil, nil end
+    if Menu.OpenedCategory then
+        local cat = Menu.Categories[Menu.OpenedCategory]
+        if cat and cat.hasTabs and cat.tabs then
+            local tab = cat.tabs[Menu.CurrentTab]
+            if tab and tab.items then
+                return tab.items[Menu.CurrentItem], cat, tab
+            end
+        end
+    else
+        local cat = Menu.Categories[Menu.CurrentCategory]
+        return cat, cat, nil
+    end
+    return nil, nil, nil
+end
+
+function Menu.IsOnlineCategory(cat, tab)
+    local c = cat and cat.name and string.lower(tostring(cat.name)) or ""
+    local t = tab and tab.name and string.lower(tostring(tab.name)) or ""
+    return c:find("en linea", 1, true) or c:find("online", 1, true) or t:find("en linea", 1, true) or t:find("online", 1, true)
+end
+
+local function _cleanPlayerMenuName(name)
+    name = tostring(name or "")
+    name = name:gsub("%[.-%]", "")
+    name = name:gsub("[»•›<>()]", "")
+    name = name:gsub("^%s+", ""):gsub("%s+$", "")
+    return name
+end
+
+function Menu.ResolvePlayerFromItem(item)
+    if not item then return nil end
+
+    local candidates = {
+        item.serverId, item.serverID, item.sid,
+        item.playerId, item.playerID, item.player,
+        item.id, item.value,
+        Menu.SelectedPlayer
+    }
+
+    for _,v in ipairs(candidates) do
+        local n = tonumber(v)
+        if n then
+            for _,pid in ipairs(GetActivePlayers and GetActivePlayers() or {}) do
+                if GetPlayerServerId(pid) == n or pid == n then
+                    return pid, GetPlayerServerId(pid)
+                end
+            end
+        end
+    end
+
+    local targetName = string.lower(_cleanPlayerMenuName(item.name or item.label or item.text or ""))
+    if targetName ~= "" and GetActivePlayers then
+        for _,pid in ipairs(GetActivePlayers()) do
+            local pname = GetPlayerName(pid) or ""
+            if string.lower(pname) == targetName or string.lower(_cleanPlayerMenuName(pname)) == targetName then
+                return pid, GetPlayerServerId(pid)
+            end
+        end
+        for _,pid in ipairs(GetActivePlayers()) do
+            local pname = string.lower(GetPlayerName(pid) or "")
+            if pname ~= "" and (targetName:find(pname, 1, true) or pname:find(targetName, 1, true)) then
+                return pid, GetPlayerServerId(pid)
+            end
+        end
+    end
+
+    return nil, nil
+end
+
+function Menu.UpdateHoveredPlayerInfo()
+    local item, cat, tab = Menu.GetCurrentSelectedItem()
+    if not Menu.Visible or not Menu.IsOnlineCategory(cat, tab) or not item or item.isSeparator then
+        Menu.PlayerInfo = nil
+        Menu.PlayerInfoAlpha = math.max(0, (Menu.PlayerInfoAlpha or 0) - 0.08)
+        return
+    end
+
+    local pid, sid = Menu.ResolvePlayerFromItem(item)
+    if not pid then
+        Menu.PlayerInfo = nil
+        Menu.PlayerInfoAlpha = math.max(0, (Menu.PlayerInfoAlpha or 0) - 0.08)
+        return
+    end
+
+    local ped = GetPlayerPed(pid)
+    if not ped or ped == 0 or (DoesEntityExist and not DoesEntityExist(ped)) then
+        Menu.PlayerInfo = nil
+        Menu.PlayerInfoAlpha = math.max(0, (Menu.PlayerInfoAlpha or 0) - 0.08)
+        return
+    end
+
+    local myPed = PlayerPedId and PlayerPedId() or 0
+    local distance = 0.0
+    if myPed ~= 0 and GetEntityCoords then
+        local a = GetEntityCoords(myPed)
+        local b = GetEntityCoords(ped)
+        if a and b then distance = #(a - b) end
+    end
+
+    local weaponHash = GetSelectedPedWeapon and GetSelectedPedWeapon(ped) or 0
+    local unarmed = GetHashKey and GetHashKey("WEAPON_UNARMED") or -1569615261
+    local hasWeapon = weaponHash and weaponHash ~= 0 and weaponHash ~= unarmed
+
+    Menu.PlayerInfo = {
+        name = GetPlayerName(pid) or _cleanPlayerMenuName(item.name),
+        serverId = sid or 0,
+        localId = pid,
+        distance = distance,
+        hasWeapon = hasWeapon,
+        weaponHash = weaponHash or 0
+    }
+    Menu.PlayerInfoAlpha = math.min(1, (Menu.PlayerInfoAlpha or 0) + 0.12)
+end
+
+function Menu.DrawPlayerInfoPanel()
+    Menu.UpdateHoveredPlayerInfo()
+    local info = Menu.PlayerInfo
+    local alpha = Menu.PlayerInfoAlpha or 0
+    if not info or alpha <= 0 then return end
+
+    local p = Menu.GetScaledPosition()
+    local x = p.x + p.width + 12
+    local y = p.y + p.headerHeight + 10
+    local w = 235 * (Menu.Scale or 1.0)
+    local h = 132 * (Menu.Scale or 1.0)
+    local acR, acG, acB = Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0
+
+    Menu.DrawRoundedRect(x, y, w, h, 0,0,0, 185*alpha, 8)
+    Menu.DrawRoundedRect(x+2, y+2, w-4, h-4, 8,12,20, 160*alpha, 7)
+    Menu.DrawRect(x, y, w, 1, acR, acG, acB, 180*alpha)
+    Menu.DrawRect(x, y+h-1, w, 1, acR, acG, acB, 60*alpha)
+
+    Menu.DrawText(x+14, y+12, "INFO JUGADOR", 12, acR, acG, acB, 255*alpha)
+    Menu.DrawText(x+14, y+34, info.name, 16, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255*alpha)
+
+    local lineY = y + 60
+    Menu.DrawText(x+14, lineY, "ID servidor", 11, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 220*alpha)
+    Menu.DrawText(x+w-55, lineY, tostring(info.serverId), 12, 1,1,1, 255*alpha)
+
+    lineY = lineY + 22
+    Menu.DrawText(x+14, lineY, "Distancia", 11, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 220*alpha)
+    Menu.DrawText(x+w-75, lineY, string.format("%.1fm", info.distance or 0), 12, 1,1,1, 255*alpha)
+
+    lineY = lineY + 22
+    local weaponText = info.hasWeapon and ("Si 0x" .. string.format("%X", tonumber(info.weaponHash) or 0)) or "No"
+    Menu.DrawText(x+14, lineY, "Arma en mano", 11, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 220*alpha)
+    Menu.DrawText(x+w-105, lineY, weaponText, 12, info.hasWeapon and 1 or 0.6, info.hasWeapon and 0.86 or 1, info.hasWeapon and 0.35 or 0.6, 255*alpha)
+end
+
 function Menu.Render()
     if Menu.TopLevelTabs and not Menu.Categories then Menu.UpdateCategoriesFromTopTab() end
     if not Susano.BeginFrame then return end
@@ -1276,6 +1466,7 @@ function Menu.Render()
         Menu.DrawHeader()
         Menu.DrawCategories()
         Menu.DrawFooter()
+        Menu.DrawPlayerInfoPanel()
         Menu.DrawAnticheatPanel()
     end
     if Menu.InputOpen then Menu.DrawInputWindow() end
