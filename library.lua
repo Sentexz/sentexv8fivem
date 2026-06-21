@@ -24,9 +24,8 @@ Menu.TabSelectorX = 0
 Menu.TabSelectorWidth = 0
 Menu.SmoothFactor = 0.22
 Menu.VisualSmoothFactor = 0.20
-Menu.ScrollbarThumbY = nil -- legacy: no se usa como tabla
-Menu.ScrollbarThumbYCat = 0
-Menu.ScrollbarThumbYItem = 0
+Menu.SmoothScrollCatY = 0
+Menu.SmoothScrollItemY = 0
 Menu.PlayerInfoAlpha = 0.0
 Menu.PlayerInfo = nil
 Menu.GradientType = 1
@@ -279,9 +278,8 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
         targetY = math.max(sbY, math.min(sbY+sbH-thumbH, targetY))
     end
 
-    -- Estado separado por tipo para evitar errores si ScrollbarThumbY quedó como número
-    -- desde una versión anterior cargada por Susano. No indexamos tablas aquí.
-    local stateName = isMainMenu and "ScrollbarThumbYCat" or "ScrollbarThumbYItem"
+    -- Estado separado por tipo. No usa REMOVED_LEGACY_NAME.
+    local stateName = isMainMenu and "SmoothScrollCatY" or "SmoothScrollItemY"
     if type(Menu[stateName]) ~= "number" or Menu[stateName] == 0 then
         Menu[stateName] = targetY
     end
