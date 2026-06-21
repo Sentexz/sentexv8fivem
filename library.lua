@@ -1,5 +1,7 @@
 local Menu = {}
 Menu.Visible = false
+Menu.PreventResetFrame = true
+Menu.MenuToggleKey = 0x4E -- N
 Menu.CurrentCategory = 2
 Menu.CurrentPage = 1
 Menu.ItemsPerPage = 9
@@ -34,7 +36,7 @@ Menu.LoadingStartTime = nil
 Menu.LoadingDuration = 3000
 
 Menu.SelectingKey = false
-Menu.SelectedKey = 0x4E -- N
+Menu.SelectedKey = Menu.MenuToggleKey
 Menu.SelectedKeyName = "N"
 Menu.TempKeyPressed = nil          -- para mostrar tecla en selector de menú
 
@@ -847,11 +849,25 @@ end
 -- ========== MANEJO DE ENTRADA ==========
 Menu.KeyStates = {}
 function Menu.IsKeyJustPressed(keyCode)
-    if not Susano.GetAsyncKeyState then return false end
+    if not Susano or not Susano.GetAsyncKeyState then return false end
+
     local down, pressed = Susano.GetAsyncKeyState(keyCode)
+
+    -- Susano puede devolver booleanos o numeros segun version/build.
+    local downNow =
+        down == true or
+        down == 1 or
+        (type(down) == "number" and down ~= 0)
+
+    local pressedNow =
+        pressed == true or
+        pressed == 1 or
+        (type(pressed) == "number" and pressed ~= 0)
+
     local wasDown = Menu.KeyStates[keyCode] or false
-    Menu.KeyStates[keyCode] = down == true
-    return (pressed == true) or (down == true and not wasDown)
+    Menu.KeyStates[keyCode] = downNow
+
+    return pressedNow or (downNow and not wasDown)
 end
 
 local captureKeys = {
@@ -962,20 +978,12 @@ function Menu.HandleInput()
         end
     end
 
-    -- Tecla fija para mostrar/ocultar menú: N.
-    -- Usa el método nativo de esta librería para Susano: GetAsyncKeyState vía Menu.IsKeyJustPressed.
-    local toggleKey = Menu.SelectedKey or 0x4E
+    -- Tecla para mostrar/ocultar menú
+    local toggleKey = Menu.SelectedKey or Menu.MenuToggleKey or 0x4E
     if Menu.IsKeyJustPressed(toggleKey) then
         Menu.Visible = not Menu.Visible
-        if Menu.Visible then
-            Menu.CurrentCategory = 2
-            Menu.OpenedCategory = nil
-            Menu.CurrentItem = 1
-            Menu.CurrentTab = 1
-            Menu.CategoryScrollOffset = 0
-            Menu.ItemScrollOffset = 0
-        elseif not Menu.ShowKeybinds then
-            if Susano.ResetFrame then Susano.ResetFrame() end
+        if not Menu.Visible and not Menu.ShowKeybinds then
+            if Susano.ResetFrame and not Menu.PreventResetFrame then Susano.ResetFrame() end
         end
     end
 
@@ -1273,9 +1281,10 @@ function Menu.Render()
     if Menu.InputOpen then Menu.DrawInputWindow() end
     if Menu.LoadingBarAlpha > 0 then Menu.DrawLoadingBar(Menu.LoadingBarAlpha) end
     if Menu.KeySelectorAlpha > 0 then Menu.DrawKeySelector(Menu.KeySelectorAlpha) end
+    if Menu.OnRender then pcall(Menu.OnRender) end
     if Susano.SubmitFrame then Susano.SubmitFrame() end
     if not Menu.Visible and not Menu.ShowKeybinds and Menu.LoadingBarAlpha<=0 and Menu.KeySelectorAlpha<=0 then
-        if Susano.ResetFrame then Susano.ResetFrame() end
+        if Susano.ResetFrame and not Menu.PreventResetFrame then Susano.ResetFrame() end
     end
 end
 
@@ -1333,7 +1342,7 @@ function Menu.DrawInputWindow()
     end
 end
 
--- Inicialización
+-- Inicialización: carga visual y apertura fija con N
 CreateThread(function()
     Menu.LoadingStartTime = GetGameTimer() or 0
     while Menu.IsLoading do
@@ -1345,6 +1354,8 @@ CreateThread(function()
             Menu.IsLoading = false
             Menu.LoadingComplete = true
             Menu.SelectingKey = false
+            Menu.SelectedKey = Menu.MenuToggleKey or 0x4E
+            Menu.SelectedKeyName = "N"
             Menu.TempKeyPressed = nil
             break
         end
