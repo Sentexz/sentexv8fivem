@@ -1569,4 +1569,25 @@ function Menu.Render()
     end
 end
 
+Menu.PreventResetFrame = true
+
+Menu.OpenKeyControl = 11 -- PAGE DOWN
+
+Menu.OnRender = function()
+    if Menu.Render then
+        Menu.Render()
+    end
+
+    if Menu.LoadingComplete and not Menu.IsLoading then
+        if IsDisabledControlJustReleased(0, Menu.OpenKeyControl)
+        or IsControlJustReleased(0, Menu.OpenKeyControl) then
+            Menu.Visible = not Menu.Visible
+        end
+
+        if Menu.HandleInput then
+            Menu.HandleInput()
+        end
+    end
+end
+
 return Menu
