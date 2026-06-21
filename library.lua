@@ -1,5 +1,5 @@
 local Menu = {}
-print("[Library] N_TOGGLE_FIXED_CATEGORIES_RESTORED loaded - Susano key 0x4E")
+print("[Library] SENTEX_PLAYERINFO_THEME_NOTICE loaded - Susano key 0x4E")
 
 local function SafeTable(value)
     return type(value) == "table" and value or {}
@@ -55,6 +55,11 @@ Menu.IsLoading = true
 Menu.LoadingComplete = false
 Menu.LoadingStartTime = nil
 Menu.LoadingDuration = 3000
+
+-- Aviso estilizado que aparece al terminar la carga.
+Menu.LoadedNoticeActive = false
+Menu.LoadedNoticeStartTime = nil
+Menu.LoadedNoticeDuration = 5600
 
 Menu.SelectingKey = false
 Menu.SelectedKey = 0x4E
@@ -1451,6 +1456,80 @@ function Menu.UpdateHoveredPlayerInfo()
     Menu.PlayerInfoAlpha = math.min(1, (Menu.PlayerInfoAlpha or 0) + 0.12)
 end
 
+-- Copos independientes para los paneles secundarios. Comparten el mismo
+-- aspecto, velocidad y estado Menu.ShowSnowflakes del menú principal.
+local function _CreatePanelSnow(count)
+    local particles = {}
+    for i = 1, count do
+        particles[#particles + 1] = {
+            x = math.random(0, 1000) / 1000,
+            y = math.random(0, 1000) / 1000,
+            speedY = math.random(18, 70) / 10000,
+            speedX = math.random(-16, 16) / 10000,
+            size = math.random(1, 2),
+            glow = math.random(0, 1) == 1
+        }
+    end
+    return particles
+end
+
+Menu.PlayerInfoParticles = Menu.PlayerInfoParticles or _CreatePanelSnow(42)
+Menu.LoadedNoticeParticles = Menu.LoadedNoticeParticles or _CreatePanelSnow(34)
+
+function Menu.DrawPanelSnow(particles, x, y, w, h, alpha, speedMultiplier)
+    if not Menu.ShowSnowflakes or type(particles) ~= "table" or alpha <= 0 then return end
+    speedMultiplier = speedMultiplier or 1.0
+
+    for _, part in ipairs(particles) do
+        part.y = part.y + (part.speedY or 0.004) * speedMultiplier
+        part.x = part.x + (part.speedX or 0.0) * speedMultiplier
+
+        if part.y > 1 then
+            part.y = 0
+            part.x = math.random(0, 1000) / 1000
+        end
+        if part.x < 0 then part.x = 1 elseif part.x > 1 then part.x = 0 end
+
+        local px = x + part.x * w
+        local py = y + part.y * h
+        local size = part.size or 1
+        local particleAlpha = (size == 2 and 125 or 90) * alpha
+
+        if part.glow then
+            Menu.DrawRect(px - 1, py - 1, size + 2, size + 2, 90, 180, 255, 24 * alpha)
+        end
+        Menu.DrawRect(px, py, size, size, 210, 232, 255, particleAlpha)
+    end
+end
+
+local function _DrawTextShadow(x, y, text, size, r, g, b, alpha)
+    Menu.DrawText(x + 1, y + 1, text, size, 0, 0, 0, 190 * alpha)
+    Menu.DrawText(x, y, text, size, r, g, b, 255 * alpha)
+end
+
+local function _DrawInfoRow(x, y, w, h, label, value, valueR, valueG, valueB, alpha)
+    local acR = Menu.Colors.Accent.r / 255.0
+    local acG = Menu.Colors.Accent.g / 255.0
+    local acB = Menu.Colors.Accent.b / 255.0
+
+    -- Misma estética BlackGlass del menú: negro transparente y acento cian.
+    Menu.DrawRoundedRect(x, y, w, h, 0, 0, 0, 58 * alpha, 4)
+    Menu.DrawRect(x, y + 4, 2, h - 8, acR, acG, acB, 145 * alpha)
+
+    _DrawTextShadow(
+        x + 11, y + h / 2 - 7,
+        label, 13,
+        Menu.Colors.TextDim.r / 255.0,
+        Menu.Colors.TextDim.g / 255.0,
+        Menu.Colors.TextDim.b / 255.0,
+        alpha
+    )
+
+    local valueSize = 14
+    local valueWidth = Susano.GetTextWidth and Susano.GetTextWidth(value, valueSize) or (string.len(value) * 7)
+    _DrawTextShadow(x + w - valueWidth - 11, y + h / 2 - 7, value, valueSize, valueR, valueG, valueB, alpha)
+end
+
 function Menu.DrawPlayerInfoPanel()
     Menu.UpdateHoveredPlayerInfo()
     local info = Menu.PlayerInfo
@@ -1459,54 +1538,138 @@ function Menu.DrawPlayerInfoPanel()
 
     local p = Menu.GetScaledPosition()
     local scale = Menu.Scale or 1.0
-    local x = p.x + p.width + 12
-    local y = p.y + p.headerHeight + 10
-    local w = 235 * scale
-    local bannerH = (Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled) and ((Menu.PlayerInfoBanner.height or 46) * scale) or 0
-    local gap = bannerH > 0 and (-1 * scale) or 0
-    local panelH = 132 * scale
-    local totalH = bannerH + gap + panelH
-    local acR, acG, acB = Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0
+    local x = p.x + p.width + 14 * scale
+    local bannerHeight = (Menu.Banner and Menu.Banner.enabled and Menu.Banner.height or Menu.Position.headerHeight) * scale
+    local y = p.y + bannerHeight + 8 * scale
+    local w = 300 * scale
+    local playerBannerH = (Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled) and ((Menu.PlayerInfoBanner.height or 50) * scale) or 0
+    local gap = playerBannerH > 0 and (-1 * scale) or 0
+    local panelH = 194 * scale
 
-    -- Banner superior "Player Info", cargado igual que el banner principal.
-    if bannerH > 0 then
+    local acR = Menu.Colors.Accent.r / 255.0
+    local acG = Menu.Colors.Accent.g / 255.0
+    local acB = Menu.Colors.Accent.b / 255.0
+    local bgAlpha = (Menu.Colors.BgMain.a or 77) * alpha
+
+    -- Sombra exterior discreta.
+    Menu.DrawRoundedRect(x + 4 * scale, y + 5 * scale, w, playerBannerH + gap + panelH, 0, 0, 0, 95 * alpha, 8 * scale)
+
+    -- Banner idéntico en integración al banner principal.
+    if playerBannerH > 0 then
         if Menu.playerInfoBannerTexture and Menu.playerInfoBannerTexture > 0 and Susano.DrawImage then
-            Susano.DrawImage(Menu.playerInfoBannerTexture, x, y, w, bannerH, 1, 1, 1, 1.0 * alpha, 0)
+            Susano.DrawImage(Menu.playerInfoBannerTexture, x, y, w, playerBannerH, 1, 1, 1, 1.0 * alpha, 0)
         else
-            Menu.DrawRoundedRect(x, y, w, bannerH, 0,0,0, 185*alpha, 7)
-            Menu.DrawRoundedRect(x+2, y+2, w-4, bannerH-4, 8,12,20, 150*alpha, 6)
-            Menu.DrawRect(x, y+bannerH-1, w, 1, acR, acG, acB, 160*alpha)
+            Menu.DrawRoundedRect(x, y, w, playerBannerH, 0, 0, 0, bgAlpha, 7 * scale)
+            Menu.DrawRect(x, y + playerBannerH - 2 * scale, w, 2 * scale, acR, acG, acB, 185 * alpha)
             local title = "PLAYER INFO"
-            local fs = 16
-            local tw = Susano.GetTextWidth and Susano.GetTextWidth(title, fs) or (string.len(title)*8)
-            Menu.DrawText(x+w/2-tw/2, y+bannerH/2-fs/2, title, fs, acR, acG, acB, 255*alpha)
+            local titleSize = 18
+            local titleWidth = Susano.GetTextWidth and Susano.GetTextWidth(title, titleSize) or (string.len(title) * 9)
+            _DrawTextShadow(x + w / 2 - titleWidth / 2, y + playerBannerH / 2 - 9 * scale, title, titleSize, acR, acG, acB, alpha)
         end
     end
 
-    local panelY = y + bannerH + gap
-    Menu.DrawRoundedRect(x, panelY, w, panelH, 0,0,0, 185*alpha, 8)
-    Menu.DrawRoundedRect(x+2, panelY+2, w-4, panelH-4, 8,12,20, 160*alpha, 7)
-    Menu.DrawRect(x, panelY, w, 1, acR, acG, acB, 180*alpha)
-    Menu.DrawRect(x, panelY+panelH-1, w, 1, acR, acG, acB, 60*alpha)
+    local panelY = y + playerBannerH + gap
 
-    Menu.DrawText(x+14, panelY+12, info.name, 16, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255*alpha)
+    -- Exactamente el fondo BlackGlass del menú, sin la antigua capa azul oscuro.
+    Menu.DrawRoundedRect(x, panelY, w, panelH, 0, 0, 0, bgAlpha, 8 * scale)
+    Menu.DrawRect(x, panelY, w, 2 * scale, acR, acG, acB, 190 * alpha)
+    Menu.DrawRect(x, panelY + panelH - 1 * scale, w, 1 * scale, acR, acG, acB, 85 * alpha)
+    Menu.DrawRect(x, panelY + 1 * scale, 1 * scale, panelH - 2 * scale, acR, acG, acB, 75 * alpha)
+    Menu.DrawRect(x + w - 1 * scale, panelY + 1 * scale, 1 * scale, panelH - 2 * scale, acR, acG, acB, 75 * alpha)
 
-    local lineY = panelY + 42
-    Menu.DrawText(x+14, lineY, "ID servidor", 11, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 220*alpha)
-    Menu.DrawText(x+w-55, lineY, tostring(info.serverId), 12, 1,1,1, 255*alpha)
+    -- Los copos se dibujan sobre el fondo y detrás del contenido.
+    Menu.DrawPanelSnow(Menu.PlayerInfoParticles, x + 3 * scale, panelY + 3 * scale, w - 6 * scale, panelH - 6 * scale, alpha, 1.0)
 
-    lineY = lineY + 22
-    Menu.DrawText(x+14, lineY, "ID local", 11, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 220*alpha)
-    Menu.DrawText(x+w-55, lineY, tostring(info.localId), 12, 1,1,1, 255*alpha)
+    -- Cabecera del jugador con la misma selección cian del menú.
+    local nameBoxX = x + 12 * scale
+    local nameBoxY = panelY + 12 * scale
+    local nameBoxW = w - 24 * scale
+    local nameBoxH = 38 * scale
+    Menu.DrawRoundedRect(nameBoxX, nameBoxY, nameBoxW, nameBoxH, acR, acG, acB, 44 * alpha, 5 * scale)
+    Menu.DrawRect(nameBoxX, nameBoxY + nameBoxH - 1 * scale, nameBoxW, 1 * scale, acR, acG, acB, 100 * alpha)
 
-    lineY = lineY + 22
-    Menu.DrawText(x+14, lineY, "Distancia", 11, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 220*alpha)
-    Menu.DrawText(x+w-75, lineY, string.format("%.1fm", info.distance or 0), 12, 1,1,1, 255*alpha)
+    local displayName = tostring(info.name or "Jugador")
+    if #displayName > 28 then displayName = string.sub(displayName, 1, 26) .. ".." end
+    _DrawTextShadow(nameBoxX + 12 * scale, nameBoxY + nameBoxH / 2 - 10 * scale, displayName, 20, 1, 1, 1, alpha)
 
-    lineY = lineY + 22
-    local weaponText = info.hasWeapon and ("Si 0x" .. string.format("%X", tonumber(info.weaponHash) or 0)) or "No"
-    Menu.DrawText(x+14, lineY, "Arma en mano", 11, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 220*alpha)
-    Menu.DrawText(x+w-105, lineY, weaponText, 12, info.hasWeapon and 1 or 0.6, info.hasWeapon and 0.86 or 1, info.hasWeapon and 0.35 or 0.6, 255*alpha)
+    local rowX = x + 12 * scale
+    local rowW = w - 24 * scale
+    local rowH = 27 * scale
+    local rowY = panelY + 58 * scale
+    local rowGap = 4 * scale
+
+    _DrawInfoRow(rowX, rowY, rowW, rowH, "ID servidor", tostring(info.serverId or 0), 1, 1, 1, alpha)
+    rowY = rowY + rowH + rowGap
+    _DrawInfoRow(rowX, rowY, rowW, rowH, "ID local", tostring(info.localId or 0), 1, 1, 1, alpha)
+    rowY = rowY + rowH + rowGap
+    _DrawInfoRow(rowX, rowY, rowW, rowH, "Distancia", string.format("%.1f m", info.distance or 0), 1, 1, 1, alpha)
+    rowY = rowY + rowH + rowGap
+
+    local weaponText = info.hasWeapon and ("SI  0x" .. string.format("%X", tonumber(info.weaponHash) or 0)) or "NO"
+    local wr, wg, wb = 0.58, 1.0, 0.72
+    if info.hasWeapon then wr, wg, wb = 1.0, 0.84, 0.30 end
+    _DrawInfoRow(rowX, rowY, rowW, rowH, "Arma en mano", weaponText, wr, wg, wb, alpha)
+end
+
+function Menu.DrawLoadedNotice()
+    if not Menu.LoadedNoticeActive or not Menu.LoadedNoticeStartTime then return end
+
+    local now = GetGameTimer and GetGameTimer() or 0
+    local elapsed = now - Menu.LoadedNoticeStartTime
+    local duration = Menu.LoadedNoticeDuration or 5600
+    if elapsed >= duration then
+        Menu.LoadedNoticeActive = false
+        return
+    end
+
+    local fadeIn = 450
+    local fadeOut = 900
+    local remaining = duration - elapsed
+    local alpha = math.min(1.0, math.max(0.0, elapsed / fadeIn))
+    if remaining < fadeOut then alpha = alpha * math.max(0.0, remaining / fadeOut) end
+    if alpha <= 0 then return end
+
+    local sw, sh = 1920, 1080
+    if Susano.GetScreenWidth then sw = Susano.GetScreenWidth() or sw end
+    if Susano.GetScreenHeight then sh = Susano.GetScreenHeight() or sh end
+
+    local w = 620
+    local h = 92
+    local x = sw / 2 - w / 2
+    local targetY = sh - 175
+    local slideOffset = (1.0 - math.min(1.0, elapsed / 520)) * 24
+    local y = targetY + slideOffset
+
+    local acR = Menu.Colors.Accent.r / 255.0
+    local acG = Menu.Colors.Accent.g / 255.0
+    local acB = Menu.Colors.Accent.b / 255.0
+
+    -- Glow exterior y tarjeta BlackGlass.
+    Menu.DrawRoundedRect(x - 7, y - 7, w + 14, h + 14, acR, acG, acB, 18 * alpha, 11)
+    Menu.DrawRoundedRect(x - 3, y - 3, w + 6, h + 6, acR, acG, acB, 30 * alpha, 9)
+    Menu.DrawRoundedRect(x, y, w, h, 0, 0, 0, 205 * alpha, 8)
+    Menu.DrawRect(x, y, w, 2, acR, acG, acB, 235 * alpha)
+    Menu.DrawRect(x, y + h - 2, w, 2, acR, acG, acB, 100 * alpha)
+
+    Menu.DrawPanelSnow(Menu.LoadedNoticeParticles, x + 4, y + 4, w - 8, h - 8, alpha * 0.75, 0.75)
+
+    local status = "INICIALIZACION COMPLETADA"
+    local statusSize = 11
+    local statusWidth = Susano.GetTextWidth and Susano.GetTextWidth(status, statusSize) or (string.len(status) * 6)
+    Menu.DrawText(x + w / 2 - statusWidth / 2, y + 13, status, statusSize, acR, acG, acB, 235 * alpha)
+
+    local message = "SENTEXMODZ cargado, presiona N para abrir"
+    local messageSize = 20
+    local messageWidth = Susano.GetTextWidth and Susano.GetTextWidth(message, messageSize) or (string.len(message) * 10)
+    _DrawTextShadow(x + w / 2 - messageWidth / 2, y + 38, message, messageSize, 1, 1, 1, alpha)
+
+    -- Línea animada de tiempo restante.
+    local progress = math.min(1.0, math.max(0.0, elapsed / duration))
+    local lineW = (w - 34) * (1.0 - progress)
+    Menu.DrawRoundedRect(x + 17, y + h - 10, w - 34, 3, 18, 24, 38, 170 * alpha, 2)
+    if lineW > 0 then
+        Menu.DrawRoundedRect(x + 17, y + h - 10, lineW, 3, acR, acG, acB, 235 * alpha, 2)
+    end
 end
 
 function Menu.Render()
@@ -1543,10 +1706,11 @@ function Menu.Render()
     end
     if Menu.InputOpen then Menu.DrawInputWindow() end
     if Menu.LoadingBarAlpha > 0 then Menu.DrawLoadingBar(Menu.LoadingBarAlpha) end
+    Menu.DrawLoadedNotice()
     if Menu.KeySelectorAlpha > 0 then Menu.DrawKeySelector(Menu.KeySelectorAlpha) end
     if Menu.OnRender then pcall(Menu.OnRender) end
     if Susano.SubmitFrame then Susano.SubmitFrame() end
-    if not Menu.Visible and not Menu.ShowKeybinds and Menu.LoadingBarAlpha<=0 and Menu.KeySelectorAlpha<=0 then
+    if not Menu.Visible and not Menu.ShowKeybinds and Menu.LoadingBarAlpha<=0 and Menu.KeySelectorAlpha<=0 and not Menu.LoadedNoticeActive then
         if Susano.ResetFrame and not Menu.PreventResetFrame then Susano.ResetFrame() end
     end
 end
@@ -1621,6 +1785,8 @@ CreateThread(function()
             Menu.MenuToggleKey = 0x4E
             Menu.SelectedKeyName = "N"
             Menu.TempKeyPressed = nil
+            Menu.LoadedNoticeStartTime = GetGameTimer and GetGameTimer() or 0
+            Menu.LoadedNoticeActive = true
             break
         end
         Wait(0)
