@@ -1,4 +1,5 @@
 local Menu = {}
+print("[Library] N_TOGGLE_FIXED loaded - Susano key 0x4E")
 print("[Library] PLAYERINFO_TIGHT_RIGHT_SAFE_LOADED")
 
 local function SafeTable(value)
@@ -15,8 +16,9 @@ local function SafeIpairs(value)
 end
 
 Menu.Visible = false
+Menu.Categories = Menu.Categories or { { name = "MENU PRINCIPAL" } }
 Menu.PreventResetFrame = true
-Menu.MenuToggleKey = 0x4E -- N
+Menu.MenuToggleKey = 0x4E -- N (Susano VK)
 Menu.BuildVersion = "Build v8.0.1"
 Menu.CurrentCategory = 2
 Menu.CurrentPage = 1
@@ -57,7 +59,7 @@ Menu.LoadingStartTime = nil
 Menu.LoadingDuration = 3000
 
 Menu.SelectingKey = false
-Menu.SelectedKey = Menu.MenuToggleKey
+Menu.SelectedKey = 0x4E
 Menu.SelectedKeyName = "N"
 Menu.TempKeyPressed = nil          -- para mostrar tecla en selector de menú
 
@@ -913,25 +915,18 @@ Menu.KeyStates = {}
 function Menu.IsKeyJustPressed(keyCode)
     if not Susano or not Susano.GetAsyncKeyState then return false end
 
-    local down, pressed = Susano.GetAsyncKeyState(keyCode)
+    local ok, down, pressed = pcall(Susano.GetAsyncKeyState, keyCode)
+    if not ok then return false end
 
-    -- Susano puede devolver booleanos o numeros segun version/build.
-    local downNow =
-        down == true or
-        down == 1 or
-        (type(down) == "number" and down ~= 0)
-
-    local pressedNow =
-        pressed == true or
-        pressed == 1 or
-        (type(pressed) == "number" and pressed ~= 0)
+    -- Método compatible con Susano: booleanos o números según build.
+    local isDown = (down == true) or (down == 1) or (type(down) == "number" and down ~= 0)
+    local isPressed = (pressed == true) or (pressed == 1) or (type(pressed) == "number" and pressed ~= 0)
 
     local wasDown = Menu.KeyStates[keyCode] or false
-    Menu.KeyStates[keyCode] = downNow
+    Menu.KeyStates[keyCode] = isDown
 
-    return pressedNow or (downNow and not wasDown)
+    return isPressed or (isDown and not wasDown)
 end
-
 local captureKeys = {
     0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4A,0x4B,0x4C,0x4D,
     0x4E,0x4F,0x50,0x51,0x52,0x53,0x54,0x55,0x56,0x57,0x58,0x59,0x5A,
@@ -966,6 +961,14 @@ Menu.KeyNames = {
     [0xA3]="Ctrl Der", [0xA4]="Alt Izq", [0xA5]="Alt Der"
 }
 function Menu.GetKeyName(k) return Menu.KeyNames[k] or ("0x"..string.format("%02X",k)) end
+
+function Menu.GetMenuToggleKey()
+    -- Fijo en N para Susano. Si luego permites selector, cambia aquí.
+    Menu.MenuToggleKey = 0x4E
+    Menu.SelectedKey = 0x4E
+    Menu.SelectedKeyName = "N"
+    return 0x4E
+end
 
 function Menu.HandleInput()
     if Menu.IsLoading or not Menu.LoadingComplete then return end
@@ -1040,8 +1043,8 @@ function Menu.HandleInput()
         end
     end
 
-    -- Tecla para mostrar/ocultar menú
-    local toggleKey = Menu.SelectedKey or Menu.MenuToggleKey or 0x4E
+    -- Tecla para mostrar/ocultar menú: N fija en Susano (VK 0x4E)
+    local toggleKey = Menu.GetMenuToggleKey and Menu.GetMenuToggleKey() or 0x4E
     if Menu.IsKeyJustPressed(toggleKey) then
         Menu.Visible = not Menu.Visible
         if not Menu.Visible and not Menu.ShowKeybinds then
@@ -1510,7 +1513,7 @@ function Menu.DrawPlayerInfoPanel()
 end
 
 function Menu.Render()
-    if Menu.TopLevelTabs and not Menu.Categories then Menu.UpdateCategoriesFromTopTab() end
+    if Menu.TopLevelTabs and (not Menu.Categories or #Menu.Categories <= 1) then Menu.UpdateCategoriesFromTopTab() end
     if not Susano.BeginFrame then return end
     local dt = GetFrameTime and GetFrameTime() or 0.016
     local anim = 5.0 * dt
@@ -1617,7 +1620,8 @@ CreateThread(function()
             Menu.IsLoading = false
             Menu.LoadingComplete = true
             Menu.SelectingKey = false
-            Menu.SelectedKey = Menu.MenuToggleKey or 0x4E
+            Menu.SelectedKey = 0x4E
+            Menu.MenuToggleKey = 0x4E
             Menu.SelectedKeyName = "N"
             Menu.TempKeyPressed = nil
             break
