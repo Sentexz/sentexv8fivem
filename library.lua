@@ -92,10 +92,10 @@ Menu.TempPressedKey = nil
 Menu.ShowKeybinds = false
 Menu.CurrentTopTab = 1
 
--- Interacción segura del menú: muestra el cursor del overlay y bloquea
--- controles del juego mientras el menú está abierto. La navegación del
--- menú sigue funcionando porque usa Susano.GetAsyncKeyState.
-Menu.BlockGameControlsWhileOpen = true
+-- Interacción del menú: mantiene visible el cursor, pero deja libres
+-- los controles del juego para poder caminar, correr y moverse mientras
+-- el menú está abierto.
+Menu.BlockGameControlsWhileOpen = false
 Menu.UnlockMouseWhileOpen = true
 Menu._InteractionLockActive = false
 Menu._CursorCenteredForOpen = false
@@ -115,11 +115,8 @@ function Menu.UpdateMenuInteractionLock()
             Menu._CursorCenteredForOpen = true
         end
 
-        if Menu.BlockGameControlsWhileOpen and DisableAllControlActions then
-            pcall(DisableAllControlActions, 0)
-            pcall(DisableAllControlActions, 1)
-            pcall(DisableAllControlActions, 2)
-        end
+        -- No se bloquean controles globales. El jugador puede usar WASD,
+        -- Shift y el resto de controles mientras navega por el menú.
     else
         Menu._CursorCenteredForOpen = false
         if Menu._InteractionLockActive and Susano then
