@@ -24,7 +24,9 @@ Menu.TabSelectorX = 0
 Menu.TabSelectorWidth = 0
 Menu.SmoothFactor = 0.22
 Menu.VisualSmoothFactor = 0.20
-Menu.ScrollbarThumbY = {}
+Menu.ScrollbarThumbY = nil -- legacy: no se usa como tabla
+Menu.ScrollbarThumbYCat = 0
+Menu.ScrollbarThumbYItem = 0
 Menu.PlayerInfoAlpha = 0.0
 Menu.PlayerInfo = nil
 Menu.GradientType = 1
@@ -277,13 +279,14 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
         targetY = math.max(sbY, math.min(sbY+sbH-thumbH, targetY))
     end
 
-    local key = isMainMenu and "cat" or "item"
-    Menu.ScrollbarThumbY = Menu.ScrollbarThumbY or {}
-    if not Menu.ScrollbarThumbY[key] or Menu.ScrollbarThumbY[key] == 0 then
-        Menu.ScrollbarThumbY[key] = targetY
+    -- Estado separado por tipo para evitar errores si ScrollbarThumbY quedó como número
+    -- desde una versión anterior cargada por Susano. No indexamos tablas aquí.
+    local stateName = isMainMenu and "ScrollbarThumbYCat" or "ScrollbarThumbYItem"
+    if type(Menu[stateName]) ~= "number" or Menu[stateName] == 0 then
+        Menu[stateName] = targetY
     end
-    Menu.ScrollbarThumbY[key] = Menu.ScrollbarThumbY[key] + (targetY - Menu.ScrollbarThumbY[key]) * (Menu.VisualSmoothFactor or 0.20)
-    local thumbY = Menu.ScrollbarThumbY[key]
+    Menu[stateName] = Menu[stateName] + (targetY - Menu[stateName]) * (Menu.VisualSmoothFactor or 0.20)
+    local thumbY = Menu[stateName]
 
     -- Thumb premium con doble capa.
     Menu.DrawRoundedRect(sbX-3*scale, thumbY-1*scale, railW+6*scale, thumbH+2*scale, acR, acG, acB, 70, railW)
