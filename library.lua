@@ -99,7 +99,7 @@ end
 
 -- Dimensiones con bordes delgados
 Menu.Position = {
-    x = 20,
+    x = 45,
     y = 80,
     width = 360,
     itemHeight = 34,
@@ -1447,7 +1447,7 @@ function Menu.DrawPlayerInfoPanel()
     local y = p.y + p.headerHeight + 10
     local w = 235 * scale
     local bannerH = (Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled) and ((Menu.PlayerInfoBanner.height or 46) * scale) or 0
-    local gap = bannerH > 0 and (6 * scale) or 0
+    local gap = bannerH > 0 and (-1 * scale) or 0
     local panelH = 132 * scale
     local totalH = bannerH + gap + panelH
     local acR, acG, acB = Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0
