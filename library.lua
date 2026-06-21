@@ -1,5 +1,5 @@
 local Menu = {}
-print("[Library] SENTEX_PLAYERINFO_COMPACT_PGDN loaded - Susano key 0x22 / FiveM control 11")
+print("[Library] SENTEX_DYNAMIC_KEY_SELECTOR loaded - key selected after loading")
 
 local function SafeTable(value)
     return type(value) == "table" and value or {}
@@ -16,7 +16,7 @@ end
 
 Menu.Visible = false
 Menu.PreventResetFrame = true
-Menu.MenuToggleKey = 0x22 -- PG DN / Page Down (Windows VK)
+Menu.MenuToggleKey = nil -- Se asigna mediante la UI al terminar la carga
 Menu.BuildVersion = "Build v8.0.1"
 Menu.CurrentCategory = 2
 Menu.CurrentPage = 1
@@ -72,9 +72,16 @@ Menu.LoadedNoticeStartTime = nil
 Menu.LoadedNoticeDuration = 5600
 
 Menu.SelectingKey = false
-Menu.SelectedKey = 0x22
-Menu.SelectedKeyName = "PG DN"
+Menu.SelectedKey = nil
+Menu.SelectedKeyName = "SIN ASIGNAR"
+Menu.SelectedControl = nil
 Menu.TempKeyPressed = nil          -- para mostrar tecla en selector de menú
+Menu.InitialKeySetupActive = false
+Menu.KeyCaptureReadyAt = 0
+Menu.KeySelectionConfirmedAt = nil
+Menu.KeySelectionFeedback = nil
+Menu.PreviousSelectedKey = nil
+Menu.PreviousSelectedControl = nil
 
 Menu.SelectingBind = false
 Menu.BindingItem = nil
@@ -94,7 +101,7 @@ Menu._InteractionLockActive = false
 Menu._CursorCenteredForOpen = false
 
 function Menu.UpdateMenuInteractionLock()
-    local active = Menu.Visible and Menu.LoadingComplete and not Menu.IsLoading
+    local active = (Menu.Visible or Menu.SelectingKey or Menu.SelectingBind or Menu.InputOpen) and Menu.LoadingComplete and not Menu.IsLoading
 
     if active then
         if Menu.UnlockMouseWhileOpen and Susano then
@@ -182,6 +189,9 @@ function Menu.ApplyTheme(themeName)
     end
     if Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled and Menu.PlayerInfoBanner.imageUrl then
         Menu.LoadPlayerInfoBannerTexture(Menu.PlayerInfoBanner.imageUrl)
+    end
+    if Menu.KeySelectorBanner and Menu.KeySelectorBanner.enabled and Menu.KeySelectorBanner.imageUrl and Menu.LoadKeySelectorBannerTexture then
+        Menu.LoadKeySelectorBannerTexture(Menu.KeySelectorBanner.imageUrl)
     end
 end
 
@@ -911,49 +921,81 @@ end
 -- Selector de tecla (para abrir menú y para keybinds) CON BANNER Y VISUALIZACIÓN EN VIVO
 function Menu.DrawKeySelector(alpha)
     if alpha <= 0 then return end
+
     local sw, sh = 1920, 1080
-    if Susano.GetScreenWidth then sw, sh = Susano.GetScreenWidth(), Susano.GetScreenHeight() end
-    local w = 420
-    local h = 150
-    local x = sw/2 - w/2
-    local y = sh - 200
+    if Susano.GetScreenWidth then sw = Susano.GetScreenWidth() or sw end
+    if Susano.GetScreenHeight then sh = Susano.GetScreenHeight() or sh end
 
-    -- Fondo principal
-    Menu.DrawRoundedRect(x, y, w, h, 0,0,0, 220*alpha, 6)
-    Menu.DrawRect(x, y, w, 1, Menu.Colors.BorderNeon.r/255.0, Menu.Colors.BorderNeon.g/255.0, Menu.Colors.BorderNeon.b/255.0, 200*alpha)
+    local w = 590
+    local h = 274
+    local x = sw / 2 - w / 2
+    local y = sh / 2 - h / 2
+    local bannerH = 126
 
-    -- Banner (si está habilitado)
-    local bannerH = 0
-    if Menu.Banner.enabled and Menu.bannerTexture and Menu.bannerTexture>0 and Susano.DrawImage then
-        bannerH = 50
-        Susano.DrawImage(Menu.bannerTexture, x+10, y+5, w-20, bannerH, 1,1,1, 0.8*alpha, 0)
+    local acR = Menu.Colors.Accent.r / 255.0
+    local acG = Menu.Colors.Accent.g / 255.0
+    local acB = Menu.Colors.Accent.b / 255.0
+
+    -- Glow exterior y una única tarjeta BlackGlass.
+    Menu.DrawRoundedRect(x - 9, y - 9, w + 18, h + 18, acR, acG, acB, 18 * alpha, 13)
+    Menu.DrawRoundedRect(x - 4, y - 4, w + 8, h + 8, acR, acG, acB, 34 * alpha, 10)
+    Menu.DrawRoundedRect(x, y, w, h, 0, 0, 0, 232 * alpha, 9)
+
+    -- Banner independiente para el selector de tecla.
+    if Menu.KeySelectorBanner and Menu.KeySelectorBanner.enabled
+        and Menu.keySelectorBannerTexture and Menu.keySelectorBannerTexture > 0
+        and Susano.DrawImage then
+        Susano.DrawImage(Menu.keySelectorBannerTexture, x + 8, y + 8, w - 16, bannerH, 1, 1, 1, 0.96 * alpha, 0)
     else
-        -- Logo textual pequeño
-        bannerH = 30
-        Menu.DrawText(x+20, y+8, "⚡ PHAZE ⚡", 20, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255*alpha)
+        Menu.DrawRoundedRect(x + 8, y + 8, w - 16, bannerH, 4, 14, 25, 245 * alpha, 7)
+        local fallback = "SELECCIONA UNA TECLA"
+        local fw = Susano.GetTextWidth and Susano.GetTextWidth(fallback, 24) or (#fallback * 12)
+        Menu.DrawText(x + w / 2 - fw / 2, y + 57, fallback, 24, acR, acG, acB, 255 * alpha)
     end
 
-    local title = "▸ ASIGNAR TECLA ◂"
-    Menu.DrawText(x+20, y + bannerH + 12, title, 14, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 255*alpha)
-    
-    local itemName = Menu.BindingItem and Menu.BindingItem.name or "Abrir menú"
-    local displayKey = Menu.BindingKeyName or "..."
-    if Menu.SelectingKey and Menu.TempKeyPressed then
-        displayKey = Menu.TempKeyPressed
-    elseif Menu.SelectingBind and Menu.TempPressedKey then
-        displayKey = Menu.TempPressedKey
+    -- Fundido para unir banner y contenido sin doble caja.
+    for i = 0, 18 do
+        local fade = (i / 18) * 205 * alpha
+        Menu.DrawRect(x + 8, y + bannerH - 6 + i, w - 16, 1, 0, 0, 0, fade)
     end
-    
-    Menu.DrawText(x+20, y + bannerH + 40, itemName, 14, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255*alpha)
-    Menu.DrawText(x+20, y + bannerH + 65, "Presiona cualquier tecla...", 12, Menu.Colors.TextDim.r/255.0, Menu.Colors.TextDim.g/255.0, Menu.Colors.TextDim.b/255.0, 200*alpha)
-    
-    local boxW, boxH = 75, 45
-    local boxX = x + w - boxW - 20
-    local boxY = y + h/2 - boxH/2
-    Menu.DrawRect(boxX, boxY, boxW, boxH, 0,0,0, 255*alpha)
-    Menu.DrawRect(boxX, boxY, boxW, 1, Menu.Colors.Accent.r/255.0, Menu.Colors.Accent.g/255.0, Menu.Colors.Accent.b/255.0, 200*alpha)
-    local kw = Susano.GetTextWidth and Susano.GetTextWidth(displayKey, 18) or (string.len(displayKey)*9)
-    Menu.DrawText(boxX+boxW/2-kw/2, boxY+boxH/2-9, displayKey, 18, 255,240,100, 255*alpha)
+
+    if Menu.DrawPanelSnow and Menu.KeySelectorParticles then
+        Menu.DrawPanelSnow(Menu.KeySelectorParticles, x + 12, y + 12, w - 24, h - 24, alpha * 0.62, 0.72)
+    end
+
+    local confirmed = Menu.KeySelectionConfirmedAt ~= nil
+    local instruction = confirmed and "TECLA ASIGNADA CORRECTAMENTE" or "PRESIONA LA TECLA QUE QUIERAS USAR"
+    local instructionSize = confirmed and 13 or 14
+    local iw = Susano.GetTextWidth and Susano.GetTextWidth(instruction, instructionSize) or (#instruction * 7)
+    Menu.DrawText(x + w / 2 - iw / 2, y + 151, instruction, instructionSize,
+        confirmed and 0.55 or Menu.Colors.TextDim.r / 255.0,
+        confirmed and 1.0 or Menu.Colors.TextDim.g / 255.0,
+        confirmed and 0.72 or Menu.Colors.TextDim.b / 255.0,
+        245 * alpha)
+
+    local displayKey = Menu.TempKeyPressed or Menu.SelectedKeyName or "..."
+    if displayKey == "SIN ASIGNAR" then displayKey = "..." end
+
+    local boxW, boxH = 218, 54
+    local boxX = x + w / 2 - boxW / 2
+    local boxY = y + 180
+    Menu.DrawRoundedRect(boxX - 3, boxY - 3, boxW + 6, boxH + 6, acR, acG, acB, 42 * alpha, 9)
+    Menu.DrawRoundedRect(boxX, boxY, boxW, boxH, 5, 10, 18, 238 * alpha, 7)
+    Menu.DrawRect(boxX + 13, boxY + boxH - 3, boxW - 26, 2, acR, acG, acB, 220 * alpha)
+
+    local keySize = 22
+    local kw = Susano.GetTextWidth and Susano.GetTextWidth(displayKey, keySize) or (#displayKey * 11)
+    Menu.DrawText(boxX + boxW / 2 - kw / 2 + 1, boxY + 15 + 1, displayKey, keySize, 0, 0, 0, 180 * alpha)
+    Menu.DrawText(boxX + boxW / 2 - kw / 2, boxY + 15, displayKey, keySize, 1, 1, 1, 255 * alpha)
+
+    local footer = confirmed and "El selector se cerrará automáticamente" or "La tecla se guardará automáticamente"
+    local footerSize = 11
+    local footerW = Susano.GetTextWidth and Susano.GetTextWidth(footer, footerSize) or (#footer * 6)
+    Menu.DrawText(x + w / 2 - footerW / 2, y + h - 24, footer, footerSize,
+        Menu.Colors.TextDim.r / 255.0, Menu.Colors.TextDim.g / 255.0, Menu.Colors.TextDim.b / 255.0, 210 * alpha)
+
+    Menu.DrawRect(x, y, w, 2, acR, acG, acB, 235 * alpha)
+    Menu.DrawRect(x, y + h - 2, w, 2, acR, acG, acB, 90 * alpha)
 end
 
 -- Panel de teclas rápidas (lateral)
@@ -1048,14 +1090,15 @@ function Menu.IsKeyJustPressed(keyCode)
     return isPressed or (isDown and not wasDown)
 end
 local captureKeys = {
+    0x08,0x09,0x10,0x11,0x12,0x14,0x20,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x2D,0x2E,
+    0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,
     0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4A,0x4B,0x4C,0x4D,
     0x4E,0x4F,0x50,0x51,0x52,0x53,0x54,0x55,0x56,0x57,0x58,0x59,0x5A,
-    0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,
-    0x20,0x1B,0x08,0x09,0x10,0x11,0x12,
-    0x25,0x26,0x27,0x28,
+    0x60,0x61,0x62,0x63,0x64,0x65,0x66,0x67,0x68,0x69,
     0x70,0x71,0x72,0x73,0x74,0x75,0x76,0x77,0x78,0x79,0x7A,0x7B,
-    0x2D,0x2E,0x21,0x22,0x23,0x24
+    0x90,0x91,0xA0,0xA1,0xA2,0xA3,0xA4,0xA5
 }
+
 Menu.KeyNames = {
     [0x08]="Retroceso", [0x09]="Tabulador", [0x0D]="Intro", [0x10]="Mayús",
     [0x11]="Ctrl", [0x12]="Alt", [0x13]="Pausa", [0x14]="Bloq Mayús",
@@ -1080,31 +1123,103 @@ Menu.KeyNames = {
     [0xA0]="Mayús Izq", [0xA1]="Mayús Der", [0xA2]="Ctrl Izq",
     [0xA3]="Ctrl Der", [0xA4]="Alt Izq", [0xA5]="Alt Der"
 }
-function Menu.GetKeyName(k) return Menu.KeyNames[k] or ("0x"..string.format("%02X",k)) end
 
-function Menu.GetMenuToggleKey()
-    -- Page Down en Susano usa el Virtual-Key de Windows 0x22.
-    Menu.MenuToggleKey = 0x22
-    Menu.SelectedKey = 0x22
-    Menu.SelectedKeyName = "PG DN"
-    return 0x22
+-- Respaldo para builds donde Susano no detecta correctamente alguna tecla.
+-- Clave: control FiveM. Valor: Virtual-Key de Windows usado por Susano.
+Menu.FiveMControlToVK = {
+    [38]=0x45, [23]=0x46, [47]=0x47, [73]=0x58, [29]=0x42,
+    [0]=0x56, [74]=0x48, [246]=0x59, [303]=0x55, [311]=0x4B,
+    [249]=0x4E, [44]=0x51, [245]=0x54, [45]=0x52, [20]=0x5A,
+    [22]=0x20, [21]=0x10, [36]=0x11, [19]=0x12,
+    [37]=0x09, [137]=0x14, [18]=0x0D, [194]=0x08,
+    [178]=0x2E, [121]=0x2D, [213]=0x24, [214]=0x23,
+    [10]=0x21, [11]=0x22,
+    [174]=0x25, [175]=0x27, [172]=0x26, [173]=0x28,
+    [288]=0x70, [289]=0x71, [170]=0x72, [166]=0x73,
+    [167]=0x74, [168]=0x75, [169]=0x76, [56]=0x77,
+    [57]=0x78, [58]=0x79
+}
+Menu.VKToFiveMControl = {}
+for control, vk in pairs(Menu.FiveMControlToVK) do
+    if Menu.VKToFiveMControl[vk] == nil then Menu.VKToFiveMControl[vk] = control end
 end
 
--- Entrada robusta: Susano VK 0x22 como método principal y control FiveM 11
--- como respaldo. Se combinan en un único booleano para evitar dobles toggles.
-function Menu.IsMenuToggleJustPressed()
-    local pressed = Menu.IsKeyJustPressed(Menu.GetMenuToggleKey())
+function Menu.GetKeyName(k)
+    return Menu.KeyNames[k] or ("0x" .. string.format("%02X", tonumber(k) or 0))
+end
 
-    if type(IsControlJustPressed) == "function" then
-        local ok, value = pcall(IsControlJustPressed, 0, 11) -- INPUT_FRONTEND_RDOWN / Page Down
-        if ok and value == true then pressed = true end
-    end
-
+local function _ControlJustPressed(control)
+    if control == nil then return false end
     if type(IsDisabledControlJustPressed) == "function" then
-        local ok, value = pcall(IsDisabledControlJustPressed, 0, 11)
-        if ok and value == true then pressed = true end
+        local ok, value = pcall(IsDisabledControlJustPressed, 0, control)
+        if ok and value == true then return true end
+    end
+    if type(IsControlJustPressed) == "function" then
+        local ok, value = pcall(IsControlJustPressed, 0, control)
+        if ok and value == true then return true end
+    end
+    return false
+end
+
+function Menu.DetectPressedMenuKey()
+    for _, vk in ipairs(captureKeys) do
+        if Menu.IsKeyJustPressed(vk) then
+            return vk, Menu.VKToFiveMControl[vk]
+        end
     end
 
+    for control, vk in pairs(Menu.FiveMControlToVK) do
+        if _ControlJustPressed(control) then return vk, control end
+    end
+
+    return nil, nil
+end
+
+function Menu.BeginMenuKeySelection(initialSetup)
+    Menu.PreviousSelectedKey = Menu.SelectedKey
+    Menu.PreviousSelectedControl = Menu.SelectedControl
+    Menu.InitialKeySetupActive = initialSetup == true
+    Menu.SelectingKey = true
+    Menu.KeySelectionConfirmedAt = nil
+    Menu.KeySelectionFeedback = nil
+    Menu.TempKeyPressed = nil
+    Menu.KeyStates = {}
+    Menu.KeyCaptureReadyAt = (GetGameTimer and GetGameTimer() or 0) + 500
+
+    if Menu.InitialKeySetupActive then
+        Menu.SelectedKey = nil
+        Menu.SelectedControl = nil
+        Menu.MenuToggleKey = nil
+        Menu.SelectedKeyName = "SIN ASIGNAR"
+        Menu.Visible = false
+    end
+end
+
+function Menu.CommitMenuToggleKey(vk, control)
+    if not vk then return end
+    Menu.SelectedKey = vk
+    Menu.MenuToggleKey = vk
+    Menu.SelectedControl = control
+    if Menu.SelectedControl == nil then Menu.SelectedControl = Menu.VKToFiveMControl[vk] end
+    Menu.SelectedKeyName = Menu.GetKeyName(vk)
+    Menu.TempKeyPressed = Menu.SelectedKeyName
+    Menu.KeySelectionFeedback = "TECLA ASIGNADA"
+    Menu.KeySelectionConfirmedAt = GetGameTimer and GetGameTimer() or 0
+end
+
+function Menu.GetMenuToggleKey()
+    return Menu.MenuToggleKey or Menu.SelectedKey
+end
+
+function Menu.IsMenuToggleJustPressed()
+    if Menu.SelectingKey or Menu.InitialKeySetupActive then return false end
+    local key = Menu.GetMenuToggleKey()
+    if not key then return false end
+
+    local pressed = Menu.IsKeyJustPressed(key)
+    local control = Menu.SelectedControl
+    if control == nil then control = Menu.VKToFiveMControl[key] end
+    if _ControlJustPressed(control) then pressed = true end
     return pressed
 end
 
@@ -1135,22 +1250,40 @@ function Menu.HandleInput()
         return
     end
 
-    -- Selección de tecla para abrir menú
+    -- Selección dinámica de la tecla para abrir el menú.
     if Menu.SelectingKey then
-        if Menu.IsKeyJustPressed(0x0D) then
-            if Menu.SelectedKey then
+        local now = GetGameTimer and GetGameTimer() or 0
+
+        if Menu.KeySelectionConfirmedAt then
+            if now - Menu.KeySelectionConfirmedAt >= 900 then
                 Menu.SelectingKey = false
+                Menu.InitialKeySetupActive = false
                 Menu.TempKeyPressed = nil
+                Menu.KeySelectionConfirmedAt = nil
+                Menu.KeySelectionFeedback = nil
+                Menu.LoadedNoticeMessage = "SENTEXMODZ cargado, presiona " .. tostring(Menu.SelectedKeyName or "tu tecla") .. " para abrir"
+                Menu.LoadedNoticeStartTime = now
+                Menu.LoadedNoticeActive = true
             end
             return
         end
-        for _,k in ipairs(captureKeys) do
-            if k ~= 0x0D and Menu.IsKeyJustPressed(k) then
-                Menu.SelectedKey = k
-                Menu.SelectedKeyName = Menu.GetKeyName(k)
-                Menu.TempKeyPressed = Menu.SelectedKeyName
-                break
-            end
+
+        if now < (Menu.KeyCaptureReadyAt or 0) then return end
+
+        -- ESC cancela solo un cambio manual; en la selección inicial es obligatorio elegir.
+        if not Menu.InitialKeySetupActive and Menu.IsKeyJustPressed(0x1B) then
+            Menu.SelectedKey = Menu.PreviousSelectedKey
+            Menu.MenuToggleKey = Menu.PreviousSelectedKey
+            Menu.SelectedControl = Menu.PreviousSelectedControl
+            Menu.SelectedKeyName = Menu.GetKeyName(Menu.SelectedKey)
+            Menu.SelectingKey = false
+            Menu.TempKeyPressed = nil
+            return
+        end
+
+        local vk, control = Menu.DetectPressedMenuKey()
+        if vk and vk ~= 0x1B and vk ~= 0x0D then
+            Menu.CommitMenuToggleKey(vk, control)
         end
         return
     end
@@ -1348,8 +1481,7 @@ function Menu.HandleInput()
                         if item.onClick then item.onClick(item.value) end
                     elseif item.type == "action" then
                         if item.name == "Cambiar tecla de menú" then
-                            Menu.SelectingKey = true
-                            Menu.TempKeyPressed = nil
+                            Menu.BeginMenuKeySelection(false)
                         end
                         if item.onClick then item.onClick() end
                     elseif item.type == "selector" then
@@ -1443,6 +1575,15 @@ Menu.playerInfoBannerTexture = nil
 Menu.playerInfoBannerWidth = 0
 Menu.playerInfoBannerHeight = 0
 
+Menu.KeySelectorBanner = {
+    enabled = true,
+    imageUrl = "https://i.imgur.com/feEx8tj.jpeg",
+    height = 126
+}
+Menu.keySelectorBannerTexture = nil
+Menu.keySelectorBannerWidth = 0
+Menu.keySelectorBannerHeight = 0
+
 function Menu.LoadBannerTexture(url)
     if not url or url == "" then return end
     if not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
@@ -1470,6 +1611,23 @@ function Menu.LoadPlayerInfoBannerTexture(url)
                 Menu.playerInfoBannerTexture = tex
                 Menu.playerInfoBannerWidth = w
                 Menu.playerInfoBannerHeight = h
+            end
+        end
+    end)
+end
+
+
+function Menu.LoadKeySelectorBannerTexture(url)
+    if not url or url == "" then return end
+    if not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
+    CreateThread(function()
+        local status, body = Susano.HttpGet(url)
+        if status == 200 and body and #body > 0 then
+            local tex, w, h = Susano.LoadTextureFromBuffer(body)
+            if tex and tex ~= 0 then
+                Menu.keySelectorBannerTexture = tex
+                Menu.keySelectorBannerWidth = w
+                Menu.keySelectorBannerHeight = h
             end
         end
     end)
@@ -1611,6 +1769,7 @@ end
 
 Menu.PlayerInfoParticles = Menu.PlayerInfoParticles or _CreatePanelSnow(26)
 Menu.LoadedNoticeParticles = Menu.LoadedNoticeParticles or _CreatePanelSnow(34)
+Menu.KeySelectorParticles = Menu.KeySelectorParticles or _CreatePanelSnow(30)
 
 function Menu.DrawPanelSnow(particles, x, y, w, h, alpha, speedMultiplier)
     if not Menu.ShowSnowflakes or type(particles) ~= "table" or alpha <= 0 then return end
@@ -1849,7 +2008,7 @@ function Menu.DrawLoadedNotice()
     local statusWidth = Susano.GetTextWidth and Susano.GetTextWidth(status, statusSize) or (string.len(status) * 6)
     Menu.DrawText(x + w / 2 - statusWidth / 2, y + 13, status, statusSize, acR, acG, acB, 235 * alpha)
 
-    local message = "SENTEXMODZ cargado, presiona PG DN para abrir"
+    local message = Menu.LoadedNoticeMessage or ("SENTEXMODZ cargado, presiona " .. tostring(Menu.SelectedKeyName or "tu tecla") .. " para abrir")
     local messageSize = 20
     local messageWidth = Susano.GetTextWidth and Susano.GetTextWidth(message, messageSize) or (string.len(message) * 10)
     _DrawTextShadow(x + w / 2 - messageWidth / 2, y + 38, message, messageSize, 1, 1, 1, alpha)
@@ -1990,7 +2149,7 @@ function Menu.DrawInputWindow()
     end
 end
 
--- Inicialización: carga visual y apertura fija con PG DN
+-- Inicialización: al completar la barra se exige seleccionar una tecla.
 CreateThread(function()
     Menu.LoadingStartTime = GetGameTimer() or 0
     while Menu.IsLoading do
@@ -2001,13 +2160,9 @@ CreateThread(function()
             Menu.LoadingProgress = 100
             Menu.IsLoading = false
             Menu.LoadingComplete = true
-            Menu.SelectingKey = false
-            Menu.SelectedKey = 0x22
-            Menu.MenuToggleKey = 0x22
-            Menu.SelectedKeyName = "PG DN"
-            Menu.TempKeyPressed = nil
-            Menu.LoadedNoticeStartTime = GetGameTimer and GetGameTimer() or 0
-            Menu.LoadedNoticeActive = true
+            Menu.LoadedNoticeActive = false
+            Menu.LoadedNoticeStartTime = nil
+            Menu.BeginMenuKeySelection(true)
             break
         end
         Wait(0)
@@ -2025,6 +2180,9 @@ end)
 if Menu.Banner.enabled and Menu.Banner.imageUrl then Menu.LoadBannerTexture(Menu.Banner.imageUrl) end
 if Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled and Menu.PlayerInfoBanner.imageUrl then
     Menu.LoadPlayerInfoBannerTexture(Menu.PlayerInfoBanner.imageUrl)
+end
+if Menu.KeySelectorBanner and Menu.KeySelectorBanner.enabled and Menu.KeySelectorBanner.imageUrl then
+    Menu.LoadKeySelectorBannerTexture(Menu.KeySelectorBanner.imageUrl)
 end
 Menu.ApplyTheme("BlackGlass")
 
