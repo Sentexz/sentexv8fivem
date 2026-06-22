@@ -4648,7 +4648,7 @@ if Actions.easyHandlingItem then
 end
 
 
--- Modo bestia: tuning maximo, potencia alta, manejo estable y downforce.
+-- Modo bestia: tuning maximo, potencia alta y manejo estable.
 -- Se mantiene aislado del resto de opciones y restaura el vehiculo al desactivarse.
 local function ToggleBeastVehicleMode(enable)
     if type(Susano) ~= "table" or type(Susano.InjectResource) ~= "function" then
@@ -4785,9 +4785,6 @@ local function ToggleBeastVehicleMode(enable)
             BeastSafeSetHandling(vehicle, "fClutchChangeRateScaleUpShift", math.max(originalOr("fClutchChangeRateScaleUpShift", 1.0), 7.0))
             BeastSafeSetHandling(vehicle, "fClutchChangeRateScaleDownShift", math.max(originalOr("fClutchChangeRateScaleDownShift", 1.0), 7.0))
 
-            if type(SetVehicleGravityAmount) == "function" then
-                pcall(SetVehicleGravityAmount, vehicle, 22.0)
-            end
             if type(SetVehicleReduceGrip) == "function" then
                 pcall(SetVehicleReduceGrip, vehicle, false)
             end
@@ -4807,31 +4804,6 @@ local function ToggleBeastVehicleMode(enable)
                 pcall(SetVehicleEngineOn, vehicle, true, true, false)
             end
 
-            local speed = 0.0
-            if type(GetEntitySpeed) == "function" then
-                local ok, value = pcall(GetEntitySpeed, vehicle)
-                if ok and type(value) == "number" then speed = value end
-            end
-
-            local onWheels = true
-            if type(IsVehicleOnAllWheels) == "function" then
-                local ok, value = pcall(IsVehicleOnAllWheels, vehicle)
-                if ok then onWheels = value == true end
-            end
-
-            local downForce
-            if onWheels then
-                downForce = math.min(8.0, 1.5 + speed * 0.05)
-            else
-                downForce = math.min(34.0, 8.0 + speed * 0.22)
-            end
-
-            if type(ApplyForceToEntity) == "function" then
-                pcall(ApplyForceToEntity, vehicle, 1,
-                    0.0, 0.0, -downForce,
-                    0.0, 0.0, 0.0,
-                    0, false, true, true, false, true)
-            end
         end
 
         local function BeastRestoreVehicle(vehicle, state)
