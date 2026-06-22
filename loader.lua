@@ -4677,6 +4677,24 @@ local function ToggleBeastVehicleMode(enable)
             end
         end
 
+        local function BeastSafeGetHandlingVector(vehicle, fieldName)
+            if type(GetVehicleHandlingVector) ~= "function" then
+                return nil
+            end
+
+            local ok, value = pcall(GetVehicleHandlingVector, vehicle, "CHandlingData", fieldName)
+            if ok and value then
+                return value
+            end
+            return nil
+        end
+
+        local function BeastSafeSetHandlingVector(vehicle, fieldName, value)
+            if type(SetVehicleHandlingVector) == "function" and value then
+                pcall(SetVehicleHandlingVector, vehicle, "CHandlingData", fieldName, value)
+            end
+        end
+
         local BeastHandlingFields = {
             "fMass",
             "fInitialDragCoeff",
@@ -4685,17 +4703,26 @@ local function ToggleBeastVehicleMode(enable)
             "fTractionCurveLateral",
             "fTractionLossMult",
             "fLowSpeedTractionLossMult",
+            "fTractionBiasFront",
             "fSteeringLock",
             "fBrakeForce",
+            "fBrakeBiasFront",
             "fHandBrakeForce",
             "fSuspensionForce",
             "fSuspensionCompDamp",
             "fSuspensionReboundDamp",
             "fAntiRollBarForce",
             "fInitialDriveForce",
+            "fInitialDriveMaxFlatVel",
+            "fDriveBiasFront",
             "fDriveInertia",
             "fClutchChangeRateScaleUpShift",
             "fClutchChangeRateScaleDownShift"
+        }
+
+        local BeastHandlingVectorFields = {
+            "vecCentreOfMassOffset",
+            "vecInertiaMultiplier"
         }
 
         local function BeastSnapshotVehicle(vehicle)
@@ -4705,13 +4732,26 @@ local function ToggleBeastVehicleMode(enable)
 
             local state = {
                 handling = {},
+                handlingVectors = {},
                 mods = {},
                 toggleMods = {},
-                gravity = 9.8
+                gravity = 9.8,
+                maxSpeed = nil
             }
 
             for _, fieldName in ipairs(BeastHandlingFields) do
                 state.handling[fieldName] = BeastSafeGetHandling(vehicle, fieldName, nil)
+            end
+
+            for _, fieldName in ipairs(BeastHandlingVectorFields) do
+                state.handlingVectors[fieldName] = BeastSafeGetHandlingVector(vehicle, fieldName)
+            end
+
+            if type(GetEntityMaxSpeed) == "function" then
+                local ok, value = pcall(GetEntityMaxSpeed, vehicle)
+                if ok and type(value) == "number" then
+                    state.maxSpeed = value
+                end
             end
 
             if type(GetVehicleMod) == "function" then
@@ -4766,44 +4806,115 @@ local function ToggleBeastVehicleMode(enable)
                 return type(value) == "number" and value or fallback
             end
 
-            BeastSafeSetHandling(vehicle, "fMass", math.max(originalOr("fMass", 1500.0), 1450.0))
-            BeastSafeSetHandling(vehicle, "fInitialDragCoeff", math.min(originalOr("fInitialDragCoeff", 8.0), 3.2))
-            BeastSafeSetHandling(vehicle, "fTractionCurveMax", math.max(originalOr("fTractionCurveMax", 2.5), 3.75))
-            BeastSafeSetHandling(vehicle, "fTractionCurveMin", math.max(originalOr("fTractionCurveMin", 2.2), 3.35))
-            BeastSafeSetHandling(vehicle, "fTractionCurveLateral", math.max(originalOr("fTractionCurveLateral", 22.0), 25.0))
-            BeastSafeSetHandling(vehicle, "fTractionLossMult", math.min(originalOr("fTractionLossMult", 1.0), 0.12))
+            -- Potencia extrema, pero con traccion integral y un chasis compensado.
+            BeastSafeSetHandling(vehicle, "fMass", math.max(originalOr("fMass", 1500.0), 1650.0))
+            BeastSafeSetHandling(vehicle, "fInitialDragCoeff", math.min(originalOr("fInitialDragCoeff", 8.0), 1.15))
+            BeastSafeSetHandling(vehicle, "fTractionCurveMax", math.max(originalOr("fTractionCurveMax", 2.5), 5.60))
+            BeastSafeSetHandling(vehicle, "fTractionCurveMin", math.max(originalOr("fTractionCurveMin", 2.2), 5.10))
+            BeastSafeSetHandling(vehicle, "fTractionCurveLateral", math.max(originalOr("fTractionCurveLateral", 22.0), 29.0))
+            BeastSafeSetHandling(vehicle, "fTractionLossMult", math.min(originalOr("fTractionLossMult", 1.0), 0.05))
             BeastSafeSetHandling(vehicle, "fLowSpeedTractionLossMult", 0.0)
-            BeastSafeSetHandling(vehicle, "fSteeringLock", math.max(originalOr("fSteeringLock", 35.0), 40.0))
-            BeastSafeSetHandling(vehicle, "fBrakeForce", math.max(originalOr("fBrakeForce", 1.0), 2.15))
-            BeastSafeSetHandling(vehicle, "fHandBrakeForce", math.max(originalOr("fHandBrakeForce", 0.8), 1.45))
-            BeastSafeSetHandling(vehicle, "fSuspensionForce", math.max(originalOr("fSuspensionForce", 2.0), 3.15))
-            BeastSafeSetHandling(vehicle, "fSuspensionCompDamp", math.max(originalOr("fSuspensionCompDamp", 1.5), 2.2))
-            BeastSafeSetHandling(vehicle, "fSuspensionReboundDamp", math.max(originalOr("fSuspensionReboundDamp", 2.0), 3.0))
-            BeastSafeSetHandling(vehicle, "fAntiRollBarForce", math.max(originalOr("fAntiRollBarForce", 0.7), 1.55))
-            BeastSafeSetHandling(vehicle, "fInitialDriveForce", math.max(originalOr("fInitialDriveForce", 0.3), 0.68))
-            BeastSafeSetHandling(vehicle, "fDriveInertia", math.max(originalOr("fDriveInertia", 1.0), 1.55))
-            BeastSafeSetHandling(vehicle, "fClutchChangeRateScaleUpShift", math.max(originalOr("fClutchChangeRateScaleUpShift", 1.0), 7.0))
-            BeastSafeSetHandling(vehicle, "fClutchChangeRateScaleDownShift", math.max(originalOr("fClutchChangeRateScaleDownShift", 1.0), 7.0))
+            BeastSafeSetHandling(vehicle, "fTractionBiasFront", 0.50)
+            BeastSafeSetHandling(vehicle, "fDriveBiasFront", 0.50)
+
+            -- Direccion y frenada fuertes, sin exagerar el giro a alta velocidad.
+            BeastSafeSetHandling(vehicle, "fSteeringLock", math.max(originalOr("fSteeringLock", 35.0), 39.0))
+            BeastSafeSetHandling(vehicle, "fBrakeForce", math.max(originalOr("fBrakeForce", 1.0), 3.40))
+            BeastSafeSetHandling(vehicle, "fBrakeBiasFront", 0.52)
+            BeastSafeSetHandling(vehicle, "fHandBrakeForce", math.max(originalOr("fHandBrakeForce", 0.8), 1.55))
+
+            -- Suspensión y anti-roll para soportar aceleraciones y frenadas secas.
+            BeastSafeSetHandling(vehicle, "fSuspensionForce", math.max(originalOr("fSuspensionForce", 2.0), 4.25))
+            BeastSafeSetHandling(vehicle, "fSuspensionCompDamp", math.max(originalOr("fSuspensionCompDamp", 1.5), 3.20))
+            BeastSafeSetHandling(vehicle, "fSuspensionReboundDamp", math.max(originalOr("fSuspensionReboundDamp", 2.0), 3.85))
+            BeastSafeSetHandling(vehicle, "fAntiRollBarForce", math.max(originalOr("fAntiRollBarForce", 0.7), 2.75))
+
+            -- Motor y caja extremadamente rápidos.
+            BeastSafeSetHandling(vehicle, "fInitialDriveForce", math.max(originalOr("fInitialDriveForce", 0.3), 1.30))
+            BeastSafeSetHandling(vehicle, "fInitialDriveMaxFlatVel", math.max(originalOr("fInitialDriveMaxFlatVel", 160.0), 420.0))
+            BeastSafeSetHandling(vehicle, "fDriveInertia", math.max(originalOr("fDriveInertia", 1.0), 2.45))
+            BeastSafeSetHandling(vehicle, "fClutchChangeRateScaleUpShift", math.max(originalOr("fClutchChangeRateScaleUpShift", 1.0), 12.0))
+            BeastSafeSetHandling(vehicle, "fClutchChangeRateScaleDownShift", math.max(originalOr("fClutchChangeRateScaleDownShift", 1.0), 12.0))
+
+            -- Centro de masa bajo y mayor resistencia al cabeceo/roll.
+            local centre = original.handlingVectors and original.handlingVectors.vecCentreOfMassOffset
+            if centre and type(vector3) == "function" then
+                BeastSafeSetHandlingVector(vehicle, "vecCentreOfMassOffset", vector3(
+                    centre.x or 0.0,
+                    centre.y or 0.0,
+                    math.min(centre.z or 0.0, -0.32)
+                ))
+            elseif type(vector3) == "function" then
+                BeastSafeSetHandlingVector(vehicle, "vecCentreOfMassOffset", vector3(0.0, 0.0, -0.32))
+            end
+
+            local inertia = original.handlingVectors and original.handlingVectors.vecInertiaMultiplier
+            if inertia and type(vector3) == "function" then
+                BeastSafeSetHandlingVector(vehicle, "vecInertiaMultiplier", vector3(
+                    math.max(inertia.x or 1.0, 1.85),
+                    math.max(inertia.y or 1.0, 1.55),
+                    math.max(inertia.z or 1.0, 1.20)
+                ))
+            elseif type(vector3) == "function" then
+                BeastSafeSetHandlingVector(vehicle, "vecInertiaMultiplier", vector3(1.85, 1.55, 1.20))
+            end
 
             if type(SetVehicleReduceGrip) == "function" then
                 pcall(SetVehicleReduceGrip, vehicle, false)
             end
             if type(SetVehicleEnginePowerMultiplier) == "function" then
-                pcall(SetVehicleEnginePowerMultiplier, vehicle, 100.0)
+                pcall(SetVehicleEnginePowerMultiplier, vehicle, 260.0)
             end
             if type(SetVehicleEngineTorqueMultiplier) == "function" then
-                pcall(SetVehicleEngineTorqueMultiplier, vehicle, 2.5)
+                pcall(SetVehicleEngineTorqueMultiplier, vehicle, 4.20)
             end
             if type(ModifyVehicleTopSpeed) == "function" then
-                pcall(ModifyVehicleTopSpeed, vehicle, 2.35)
+                pcall(ModifyVehicleTopSpeed, vehicle, 5.50)
             end
             if type(SetEntityMaxSpeed) == "function" then
-                pcall(SetEntityMaxSpeed, vehicle, 110.0)
+                pcall(SetEntityMaxSpeed, vehicle, 190.0)
             end
             if type(SetVehicleEngineOn) == "function" then
                 pcall(SetVehicleEngineOn, vehicle, true, true, false)
             end
+        end
 
+        -- Aceleración y frenada longitudinales: rápidas sin aplicar fuerzas que levanten el coche.
+        local function BeastApplyResponsiveDrive(vehicle)
+            if type(GetEntitySpeedVector) ~= "function" or type(SetVehicleForwardSpeed) ~= "function" then
+                return
+            end
+
+            local dt = 0.016
+            if type(GetFrameTime) == "function" then
+                local ok, value = pcall(GetFrameTime)
+                if ok and type(value) == "number" then
+                    dt = math.max(0.001, math.min(0.05, value))
+                end
+            end
+
+            local speedVector = GetEntitySpeedVector(vehicle, true)
+            local forwardSpeed = speedVector and speedVector.y or 0.0
+            local onWheels = type(IsVehicleOnAllWheels) ~= "function" or IsVehicleOnAllWheels(vehicle)
+
+            local accelerating = false
+            local braking = false
+            if type(IsControlPressed) == "function" then
+                accelerating = IsControlPressed(0, 71) == true
+                braking = IsControlPressed(0, 72) == true
+            end
+            if type(IsDisabledControlPressed) == "function" then
+                accelerating = accelerating or IsDisabledControlPressed(0, 71) == true
+                braking = braking or IsDisabledControlPressed(0, 72) == true
+            end
+
+            if onWheels and accelerating and forwardSpeed >= -0.5 then
+                local target = math.min(185.0, math.max(0.0, forwardSpeed) + (105.0 * dt))
+                pcall(SetVehicleForwardSpeed, vehicle, target)
+            elseif onWheels and braking and forwardSpeed > 0.5 then
+                local target = math.max(0.0, forwardSpeed - (235.0 * dt))
+                pcall(SetVehicleForwardSpeed, vehicle, target)
+            end
         end
 
         local function BeastRestoreVehicle(vehicle, state)
@@ -4814,6 +4925,12 @@ local function ToggleBeastVehicleMode(enable)
             for fieldName, value in pairs(state.handling or {}) do
                 if type(value) == "number" then
                     BeastSafeSetHandling(vehicle, fieldName, value)
+                end
+            end
+
+            for fieldName, value in pairs(state.handlingVectors or {}) do
+                if value then
+                    BeastSafeSetHandlingVector(vehicle, fieldName, value)
                 end
             end
 
@@ -4844,6 +4961,9 @@ local function ToggleBeastVehicleMode(enable)
             end
             if type(ModifyVehicleTopSpeed) == "function" then
                 pcall(ModifyVehicleTopSpeed, vehicle, 1.0)
+            end
+            if type(SetEntityMaxSpeed) == "function" and type(state.maxSpeed) == "number" then
+                pcall(SetEntityMaxSpeed, vehicle, state.maxSpeed)
             end
         end
 
@@ -4876,6 +4996,7 @@ local function ToggleBeastVehicleMode(enable)
                             end
 
                             BeastApplyDrivingSetup(vehicle)
+                            BeastApplyResponsiveDrive(vehicle)
                             lastVehicle = vehicle
                         end
                     else
