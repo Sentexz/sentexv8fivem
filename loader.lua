@@ -4809,32 +4809,32 @@ local function ToggleBeastVehicleMode(enable)
             -- Potencia extrema, pero con traccion integral y un chasis compensado.
             BeastSafeSetHandling(vehicle, "fMass", math.max(originalOr("fMass", 1500.0), 1650.0))
             BeastSafeSetHandling(vehicle, "fInitialDragCoeff", math.min(originalOr("fInitialDragCoeff", 8.0), 1.15))
-            BeastSafeSetHandling(vehicle, "fTractionCurveMax", math.max(originalOr("fTractionCurveMax", 2.5), 5.60))
-            BeastSafeSetHandling(vehicle, "fTractionCurveMin", math.max(originalOr("fTractionCurveMin", 2.2), 5.10))
-            BeastSafeSetHandling(vehicle, "fTractionCurveLateral", math.max(originalOr("fTractionCurveLateral", 22.0), 29.0))
-            BeastSafeSetHandling(vehicle, "fTractionLossMult", math.min(originalOr("fTractionLossMult", 1.0), 0.05))
+            BeastSafeSetHandling(vehicle, "fTractionCurveMax", math.max(originalOr("fTractionCurveMax", 2.5), 8.80))
+            BeastSafeSetHandling(vehicle, "fTractionCurveMin", math.max(originalOr("fTractionCurveMin", 2.2), 8.20))
+            BeastSafeSetHandling(vehicle, "fTractionCurveLateral", math.max(originalOr("fTractionCurveLateral", 22.0), 36.0))
+            BeastSafeSetHandling(vehicle, "fTractionLossMult", math.min(originalOr("fTractionLossMult", 1.0), 0.01))
             BeastSafeSetHandling(vehicle, "fLowSpeedTractionLossMult", 0.0)
             BeastSafeSetHandling(vehicle, "fTractionBiasFront", 0.50)
             BeastSafeSetHandling(vehicle, "fDriveBiasFront", 0.50)
 
-            -- Direccion y frenada fuertes, sin exagerar el giro a alta velocidad.
-            BeastSafeSetHandling(vehicle, "fSteeringLock", math.max(originalOr("fSteeringLock", 35.0), 39.0))
-            BeastSafeSetHandling(vehicle, "fBrakeForce", math.max(originalOr("fBrakeForce", 1.0), 3.40))
-            BeastSafeSetHandling(vehicle, "fBrakeBiasFront", 0.52)
-            BeastSafeSetHandling(vehicle, "fHandBrakeForce", math.max(originalOr("fHandBrakeForce", 0.8), 1.55))
+            -- Direccion arcade muy directa y frenada seca.
+            BeastSafeSetHandling(vehicle, "fSteeringLock", math.max(originalOr("fSteeringLock", 35.0), 52.0))
+            BeastSafeSetHandling(vehicle, "fBrakeForce", math.max(originalOr("fBrakeForce", 1.0), 8.50))
+            BeastSafeSetHandling(vehicle, "fBrakeBiasFront", 0.50)
+            BeastSafeSetHandling(vehicle, "fHandBrakeForce", math.max(originalOr("fHandBrakeForce", 0.8), 2.20))
 
             -- Suspensión y anti-roll para soportar aceleraciones y frenadas secas.
-            BeastSafeSetHandling(vehicle, "fSuspensionForce", math.max(originalOr("fSuspensionForce", 2.0), 4.25))
-            BeastSafeSetHandling(vehicle, "fSuspensionCompDamp", math.max(originalOr("fSuspensionCompDamp", 1.5), 3.20))
-            BeastSafeSetHandling(vehicle, "fSuspensionReboundDamp", math.max(originalOr("fSuspensionReboundDamp", 2.0), 3.85))
-            BeastSafeSetHandling(vehicle, "fAntiRollBarForce", math.max(originalOr("fAntiRollBarForce", 0.7), 2.75))
+            BeastSafeSetHandling(vehicle, "fSuspensionForce", math.max(originalOr("fSuspensionForce", 2.0), 5.20))
+            BeastSafeSetHandling(vehicle, "fSuspensionCompDamp", math.max(originalOr("fSuspensionCompDamp", 1.5), 4.40))
+            BeastSafeSetHandling(vehicle, "fSuspensionReboundDamp", math.max(originalOr("fSuspensionReboundDamp", 2.0), 5.10))
+            BeastSafeSetHandling(vehicle, "fAntiRollBarForce", math.max(originalOr("fAntiRollBarForce", 0.7), 4.20))
 
             -- Motor y caja extremadamente rápidos.
-            BeastSafeSetHandling(vehicle, "fInitialDriveForce", math.max(originalOr("fInitialDriveForce", 0.3), 1.30))
-            BeastSafeSetHandling(vehicle, "fInitialDriveMaxFlatVel", math.max(originalOr("fInitialDriveMaxFlatVel", 160.0), 420.0))
-            BeastSafeSetHandling(vehicle, "fDriveInertia", math.max(originalOr("fDriveInertia", 1.0), 2.45))
-            BeastSafeSetHandling(vehicle, "fClutchChangeRateScaleUpShift", math.max(originalOr("fClutchChangeRateScaleUpShift", 1.0), 12.0))
-            BeastSafeSetHandling(vehicle, "fClutchChangeRateScaleDownShift", math.max(originalOr("fClutchChangeRateScaleDownShift", 1.0), 12.0))
+            BeastSafeSetHandling(vehicle, "fInitialDriveForce", math.max(originalOr("fInitialDriveForce", 0.3), 3.80))
+            BeastSafeSetHandling(vehicle, "fInitialDriveMaxFlatVel", math.max(originalOr("fInitialDriveMaxFlatVel", 160.0), 650.0))
+            BeastSafeSetHandling(vehicle, "fDriveInertia", math.max(originalOr("fDriveInertia", 1.0), 5.50))
+            BeastSafeSetHandling(vehicle, "fClutchChangeRateScaleUpShift", math.max(originalOr("fClutchChangeRateScaleUpShift", 1.0), 25.0))
+            BeastSafeSetHandling(vehicle, "fClutchChangeRateScaleDownShift", math.max(originalOr("fClutchChangeRateScaleDownShift", 1.0), 25.0))
 
             -- Centro de masa bajo y mayor resistencia al cabeceo/roll.
             local centre = original.handlingVectors and original.handlingVectors.vecCentreOfMassOffset
@@ -4842,44 +4842,45 @@ local function ToggleBeastVehicleMode(enable)
                 BeastSafeSetHandlingVector(vehicle, "vecCentreOfMassOffset", vector3(
                     centre.x or 0.0,
                     centre.y or 0.0,
-                    math.min(centre.z or 0.0, -0.32)
+                    math.min(centre.z or 0.0, -0.48)
                 ))
             elseif type(vector3) == "function" then
-                BeastSafeSetHandlingVector(vehicle, "vecCentreOfMassOffset", vector3(0.0, 0.0, -0.32))
+                BeastSafeSetHandlingVector(vehicle, "vecCentreOfMassOffset", vector3(0.0, 0.0, -0.48))
             end
 
             local inertia = original.handlingVectors and original.handlingVectors.vecInertiaMultiplier
             if inertia and type(vector3) == "function" then
                 BeastSafeSetHandlingVector(vehicle, "vecInertiaMultiplier", vector3(
-                    math.max(inertia.x or 1.0, 1.85),
-                    math.max(inertia.y or 1.0, 1.55),
-                    math.max(inertia.z or 1.0, 1.20)
+                    math.max(inertia.x or 1.0, 2.60),
+                    math.max(inertia.y or 1.0, 2.20),
+                    math.max(inertia.z or 1.0, 1.65)
                 ))
             elseif type(vector3) == "function" then
-                BeastSafeSetHandlingVector(vehicle, "vecInertiaMultiplier", vector3(1.85, 1.55, 1.20))
+                BeastSafeSetHandlingVector(vehicle, "vecInertiaMultiplier", vector3(2.60, 2.20, 1.65))
             end
 
             if type(SetVehicleReduceGrip) == "function" then
                 pcall(SetVehicleReduceGrip, vehicle, false)
             end
             if type(SetVehicleEnginePowerMultiplier) == "function" then
-                pcall(SetVehicleEnginePowerMultiplier, vehicle, 260.0)
+                pcall(SetVehicleEnginePowerMultiplier, vehicle, 900.0)
             end
             if type(SetVehicleEngineTorqueMultiplier) == "function" then
-                pcall(SetVehicleEngineTorqueMultiplier, vehicle, 4.20)
+                pcall(SetVehicleEngineTorqueMultiplier, vehicle, 12.0)
             end
             if type(ModifyVehicleTopSpeed) == "function" then
-                pcall(ModifyVehicleTopSpeed, vehicle, 5.50)
+                pcall(ModifyVehicleTopSpeed, vehicle, 12.0)
             end
             if type(SetEntityMaxSpeed) == "function" then
-                pcall(SetEntityMaxSpeed, vehicle, 190.0)
+                pcall(SetEntityMaxSpeed, vehicle, 290.0)
             end
             if type(SetVehicleEngineOn) == "function" then
                 pcall(SetVehicleEngineOn, vehicle, true, true, false)
             end
         end
 
-        -- Aceleración y frenada longitudinales: rápidas sin aplicar fuerzas que levanten el coche.
+        -- Conduccion arcade extrema: 0-500 km/h en unos 2 segundos, punta cercana a 1000 km/h,
+        -- frenada seca, giro asistido y velocidad siempre alineada para evitar derrapes.
         local function BeastApplyResponsiveDrive(vehicle)
             if type(GetEntitySpeedVector) ~= "function" or type(SetVehicleForwardSpeed) ~= "function" then
                 return
@@ -4895,10 +4896,13 @@ local function ToggleBeastVehicleMode(enable)
 
             local speedVector = GetEntitySpeedVector(vehicle, true)
             local forwardSpeed = speedVector and speedVector.y or 0.0
+            local absoluteSpeed = math.abs(forwardSpeed)
             local onWheels = type(IsVehicleOnAllWheels) ~= "function" or IsVehicleOnAllWheels(vehicle)
 
             local accelerating = false
             local braking = false
+            local steerInput = 0.0
+
             if type(IsControlPressed) == "function" then
                 accelerating = IsControlPressed(0, 71) == true
                 braking = IsControlPressed(0, 72) == true
@@ -4907,13 +4911,55 @@ local function ToggleBeastVehicleMode(enable)
                 accelerating = accelerating or IsDisabledControlPressed(0, 71) == true
                 braking = braking or IsDisabledControlPressed(0, 72) == true
             end
+            if type(GetControlNormal) == "function" then
+                steerInput = GetControlNormal(0, 59) or 0.0
+            end
+            if type(GetDisabledControlNormal) == "function" then
+                local disabledSteer = GetDisabledControlNormal(0, 59) or 0.0
+                if math.abs(disabledSteer) > math.abs(steerInput) then
+                    steerInput = disabledSteer
+                end
+            end
 
-            if onWheels and accelerating and forwardSpeed >= -0.5 then
-                local target = math.min(185.0, math.max(0.0, forwardSpeed) + (105.0 * dt))
+            -- 500 km/h son 138.9 m/s. A 78 m/s² se alcanzan en ~1.8 s.
+            local MAX_SPEED_MS = 280.0      -- ~1008 km/h
+            local ACCELERATION_MS2 = 78.0   -- aceleracion brutal y lineal
+            local BRAKE_MS2 = 430.0         -- frenada muy seca
+
+            if onWheels and accelerating and forwardSpeed >= -1.0 then
+                local target = math.min(MAX_SPEED_MS, math.max(0.0, forwardSpeed) + (ACCELERATION_MS2 * dt))
                 pcall(SetVehicleForwardSpeed, vehicle, target)
+                forwardSpeed = target
+                absoluteSpeed = target
             elseif onWheels and braking and forwardSpeed > 0.5 then
-                local target = math.max(0.0, forwardSpeed - (235.0 * dt))
+                local target = math.max(0.0, forwardSpeed - (BRAKE_MS2 * dt))
+                if target < 1.0 then target = 0.0 end
                 pcall(SetVehicleForwardSpeed, vehicle, target)
+                forwardSpeed = target
+                absoluteSpeed = target
+            elseif onWheels and forwardSpeed > 1.0 then
+                -- Re-alinea la velocidad con el morro del coche para eliminar deriva lateral.
+                pcall(SetVehicleForwardSpeed, vehicle, forwardSpeed)
+            end
+
+            -- Giro asistido tipo arcade. A alta velocidad sigue girando fuerte, pero sin ser instantaneo.
+            if onWheels and math.abs(steerInput) > 0.035 and absoluteSpeed > 1.0
+                and type(GetEntityHeading) == "function" and type(SetEntityHeading) == "function" then
+
+                local speedRatio = math.min(1.0, absoluteSpeed / MAX_SPEED_MS)
+                local turnRate = 78.0 - (speedRatio * 34.0) -- 78°/s lento, 44°/s a 1000 km/h
+                local heading = GetEntityHeading(vehicle)
+                local newHeading = heading + (steerInput * turnRate * dt)
+                pcall(SetEntityHeading, vehicle, newHeading)
+
+                -- Vuelve a alinear la velocidad tras cambiar el heading para que no derrape.
+                if forwardSpeed > 1.0 then
+                    pcall(SetVehicleForwardSpeed, vehicle, forwardSpeed)
+                end
+            end
+
+            if type(SetVehicleSteeringScale) == "function" then
+                pcall(SetVehicleSteeringScale, vehicle, 1.0)
             end
         end
 
