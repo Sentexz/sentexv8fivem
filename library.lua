@@ -92,19 +92,24 @@ Menu.TempPressedKey = nil
 Menu.ShowKeybinds = false
 Menu.CurrentTopTab = 1
 
--- Interacción del menú: mantiene visible el cursor, pero deja libres
--- los controles del juego para poder caminar, correr y moverse mientras
--- el menú está abierto.
+-- Interacción del menú: no captura el ratón ni bloquea controles.
+-- El menú se sigue navegando por teclado y el jugador conserva el movimiento
+-- y la cámara libre mientras el menú está abierto.
 Menu.BlockGameControlsWhileOpen = false
-Menu.UnlockMouseWhileOpen = true
+Menu.UnlockMouseWhileOpen = false
+Menu.EditorMouseWhileOpen = true
 Menu._InteractionLockActive = false
 Menu._CursorCenteredForOpen = false
 
 function Menu.UpdateMenuInteractionLock()
-    local active = (Menu.Visible or Menu.SelectingKey or Menu.SelectingBind or Menu.InputOpen) and Menu.LoadingComplete and not Menu.IsLoading
+    local menuActive = (Menu.Visible or Menu.SelectingKey or Menu.SelectingBind or Menu.InputOpen) and Menu.LoadingComplete and not Menu.IsLoading
+    local cursorActive = Menu.Visible and Menu.EditorMode and Menu.EditorMouseWhileOpen and Menu.LoadingComplete and not Menu.IsLoading
 
-    if active then
-        if Menu.UnlockMouseWhileOpen and Susano then
+    if cursorActive then
+        -- Solo el modo editor necesita cursor del overlay para arrastrar el menú.
+        -- Al abrir el menú normal no se activa el overlay, así FiveM conserva
+        -- el movimiento del ratón para la cámara del jugador.
+        if Susano then
             if Susano.EnableOverlay then pcall(Susano.EnableOverlay, true) end
             if Susano.SetCursorVisible then pcall(Susano.SetCursorVisible, true) end
             if Susano.ShowCursor then pcall(Susano.ShowCursor, true) end
@@ -114,19 +119,18 @@ function Menu.UpdateMenuInteractionLock()
             pcall(SetCursorLocation, 0.5, 0.5)
             Menu._CursorCenteredForOpen = true
         end
-
-        -- No se bloquean controles globales. El jugador puede usar WASD,
-        -- Shift y el resto de controles mientras navega por el menú.
     else
         Menu._CursorCenteredForOpen = false
-        if Menu._InteractionLockActive and Susano then
-            if Susano.EnableOverlay then pcall(Susano.EnableOverlay, false) end
-            if Susano.SetCursorVisible then pcall(Susano.SetCursorVisible, false) end
-            if Susano.ShowCursor then pcall(Susano.ShowCursor, false) end
+        if menuActive or Menu._InteractionLockActive then
+            if Susano then
+                if Susano.EnableOverlay then pcall(Susano.EnableOverlay, false) end
+                if Susano.SetCursorVisible then pcall(Susano.SetCursorVisible, false) end
+                if Susano.ShowCursor then pcall(Susano.ShowCursor, false) end
+            end
         end
     end
 
-    Menu._InteractionLockActive = active
+    Menu._InteractionLockActive = cursorActive
 end
 
 -- Panel de anticheat (opcional)
