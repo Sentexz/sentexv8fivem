@@ -37,6 +37,45 @@ if not chunk then
 end
 local Menu = chunk()
 
+-- Parche defensivo de interacción: evita que la librería capture el ratón
+-- durante el uso normal del menú. Solo el modo editor mantiene cursor.
+if Menu then
+    Menu.BlockGameControlsWhileOpen = false
+    Menu.UnlockMouseWhileOpen = false
+    Menu.EditorMouseWhileOpen = true
+    Menu._InteractionLockActive = false
+    Menu._CursorCenteredForOpen = false
+
+    function Menu.UpdateMenuInteractionLock()
+        local menuActive = (Menu.Visible or Menu.SelectingKey or Menu.SelectingBind or Menu.InputOpen) and Menu.LoadingComplete and not Menu.IsLoading
+        local cursorActive = Menu.Visible and Menu.EditorMode and Menu.EditorMouseWhileOpen and Menu.LoadingComplete and not Menu.IsLoading
+
+        if cursorActive then
+            if Susano then
+                if Susano.EnableOverlay then pcall(Susano.EnableOverlay, true) end
+                if Susano.SetCursorVisible then pcall(Susano.SetCursorVisible, true) end
+                if Susano.ShowCursor then pcall(Susano.ShowCursor, true) end
+            end
+
+            if not Menu._CursorCenteredForOpen and SetCursorLocation then
+                pcall(SetCursorLocation, 0.5, 0.5)
+                Menu._CursorCenteredForOpen = true
+            end
+        else
+            Menu._CursorCenteredForOpen = false
+            if menuActive or Menu._InteractionLockActive then
+                if Susano then
+                    if Susano.EnableOverlay then pcall(Susano.EnableOverlay, false) end
+                    if Susano.SetCursorVisible then pcall(Susano.SetCursorVisible, false) end
+                    if Susano.ShowCursor then pcall(Susano.ShowCursor, false) end
+                end
+            end
+        end
+
+        Menu._InteractionLockActive = cursorActive
+    end
+end
+
 -- Apertura del menu con PG DN usando VK/Susano
 Menu.SelectedKey = 0x22
 Menu.SelectedKeyName = "Av Pag"
@@ -1589,6 +1628,35 @@ Menu.Categories = {
         }}
     }}
 }
+
+local function ProtectMenuCallbacks()
+    local function wrapItem(item)
+        if type(item) ~= "table" or type(item.onClick) ~= "function" or item.__pcallWrapped then return end
+        local original = item.onClick
+        item.onClick = function(...)
+            local ok, err = pcall(original, ...)
+            if not ok then
+                print("[Loader] onClick error: " .. tostring(err))
+            end
+        end
+        item.__pcallWrapped = true
+    end
+
+    if type(Menu) ~= "table" or type(Menu.Categories) ~= "table" then return end
+    for _, cat in ipairs(Menu.Categories) do
+        if type(cat) == "table" and type(cat.tabs) == "table" then
+            for _, tab in ipairs(cat.tabs) do
+                if type(tab) == "table" and type(tab.items) == "table" then
+                    for _, item in ipairs(tab.items) do
+                        wrapItem(item)
+                    end
+                end
+            end
+        end
+    end
+end
+
+ProtectMenuCallbacks()
 
 if Menu.ApplyTheme then
     Menu.ApplyTheme("Rojo")
