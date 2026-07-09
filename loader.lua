@@ -258,26 +258,124 @@ end
 -- Sin variables locales en el chunk principal: evita el error "too many local variables".
 _G.SentexBacanerias = _G.SentexBacanerias or {}
 _G.SentexBacanerias.SpawnedProps = _G.SentexBacanerias.SpawnedProps or {}
-_G.SentexBacanerias.MaxProps = _G.SentexBacanerias.MaxProps or 30
+_G.SentexBacanerias.MaxProps = _G.SentexBacanerias.MaxProps or 60
 _G.SentexBacanerias.SpawnDistance = _G.SentexBacanerias.SpawnDistance or 45.0
 _G.SentexBacanerias.FreezeProps = _G.SentexBacanerias.FreezeProps ~= false
 _G.SentexBacanerias.NetworkedProps = _G.SentexBacanerias.NetworkedProps == true -- Local por defecto.
 
 _G.SentexBacanerias.PropDefs = _G.SentexBacanerias.PropDefs or {
+    -- Rampas / parkour
     rampa_pequena = { label = "Rampa pequena", model = "prop_mp_ramp_01", fallback = "prop_mp_ramp_02", placeOnGround = true, alignToPlayer = true },
     rampa_media   = { label = "Rampa media",   model = "prop_mp_ramp_02", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
     rampa_gigante = { label = "Rampa gigante", model = "stt_prop_stunt_bblock_huge_04", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
+    plataforma    = { label = "Plataforma", model = "prop_fnclink_03gate5", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
+    plataforma_metal = { label = "Plataforma metal", model = "prop_container_05a", fallback = "prop_container_01a", placeOnGround = true, alignToPlayer = true },
+    plataforma_alta = { label = "Plataforma alta", model = "prop_container_03a", fallback = "prop_container_01a", zOffset = 4.0, placeOnGround = false, alignToPlayer = true },
+    muro_bajo = { label = "Muro bajo", model = "prop_mp_barrier_02", fallback = "prop_barrier_work05", placeOnGround = true, alignToPlayer = true },
 
+    -- Asteroides / rocas
     asteroide_pequeno = { label = "Asteroide pequeno", model = "prop_rock_4_cl_2", fallback = "prop_rock_4_c", placeOnGround = true },
     asteroide_grande  = { label = "Asteroide grande",  model = "prop_asteroid_01", fallback = "prop_rock_4_big2", placeOnGround = true },
     asteroide_flotante = { label = "Asteroide flotante", model = "prop_asteroid_01", fallback = "prop_rock_4_big2", zOffset = 8.0, placeOnGround = false },
+    roca_grande = { label = "Roca grande", model = "prop_rock_4_big2", fallback = "prop_rock_4_big", placeOnGround = true },
+    roca_media = { label = "Roca media", model = "prop_rock_4_c", fallback = "prop_rock_4_cl_2", placeOnGround = true },
 
+    -- Props ciudad / obstaculos
     bola_gigante = { label = "Bola gigante", model = "stt_prop_stunt_soccer_ball", fallback = "prop_beachball_02", placeOnGround = true },
     contenedor   = { label = "Contenedor",   model = "prop_container_01a", fallback = "prop_boxpile_07d", placeOnGround = true, alignToPlayer = true },
+    contenedor_abierto = { label = "Contenedor abierto", model = "prop_container_03a", fallback = "prop_container_01a", placeOnGround = true, alignToPlayer = true },
     barrera      = { label = "Barrera",      model = "prop_mp_barrier_02b", fallback = "prop_barrier_work05", placeOnGround = true, alignToPlayer = true },
-    plataforma   = { label = "Plataforma",   model = "prop_fnclink_03gate5", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true }
+    valla_obra = { label = "Valla de obra", model = "prop_barrier_work06a", fallback = "prop_barrier_work05", placeOnGround = true, alignToPlayer = true },
+    cono = { label = "Cono", model = "prop_roadcone02a", fallback = "prop_mp_cone_01", placeOnGround = true },
+    senal_stop = { label = "Senal stop", model = "prop_sign_road_01a", fallback = "prop_sign_road_03a", placeOnGround = true, alignToPlayer = true },
+    barril = { label = "Barril", model = "prop_barrel_02a", fallback = "prop_barrel_01a", placeOnGround = true },
+    dumpster = { label = "Contenedor basura", model = "prop_dumpster_01a", fallback = "prop_dumpster_02a", placeOnGround = true, alignToPlayer = true },
+    caja_grande = { label = "Caja grande", model = "prop_boxpile_07d", fallback = "prop_boxpile_02c", placeOnGround = true, alignToPlayer = true },
+    tubos = { label = "Tubos", model = "prop_pipe_stack_01", fallback = "prop_pipes_01a", placeOnGround = true, alignToPlayer = true },
+
+    -- Decoracion / escenarios
+    banco = { label = "Banco", model = "prop_bench_01a", fallback = "prop_bench_03", placeOnGround = true, alignToPlayer = true },
+    mesa_picnic = { label = "Mesa picnic", model = "prop_table_03b", fallback = "prop_table_04", placeOnGround = true, alignToPlayer = true },
+    silla = { label = "Silla", model = "prop_chair_01a", fallback = "prop_chair_04a", placeOnGround = true, alignToPlayer = true },
+    sombrilla = { label = "Sombrilla", model = "prop_parasol_01", fallback = "prop_parasol_04", placeOnGround = true },
+    pantalla = { label = "Pantalla", model = "prop_tv_flat_01", fallback = "prop_tv_03", placeOnGround = true, alignToPlayer = true },
+    altavoz = { label = "Altavoz", model = "prop_speaker_01", fallback = "prop_speaker_05", placeOnGround = true, alignToPlayer = true },
+    fogata = { label = "Fogata", model = "prop_beach_fire", fallback = "prop_barrel_02a", placeOnGround = true },
+
+    -- Naturaleza
+    arbol_pino = { label = "Arbol pino", model = "prop_tree_pine_01", fallback = "prop_tree_eng_oak_01", placeOnGround = true },
+    palmera = { label = "Palmera", model = "prop_palm_fan_03_b", fallback = "prop_palm_sm_01a", placeOnGround = true },
+    cactus = { label = "Cactus", model = "prop_cactus_01a", fallback = "prop_cactus_02", placeOnGround = true },
+    arbusto = { label = "Arbusto", model = "prop_bush_lrg_01", fallback = "prop_bush_med_03", placeOnGround = true }
 }
 
+_G.SentexBacanerias.Presets = _G.SentexBacanerias.Presets or {
+    circuito_conos = {
+        label = "Circuito de conos",
+        items = {
+            { key = "cono", x = -4, y = 0 }, { key = "cono", x = 4, y = 0 },
+            { key = "cono", x = -4, y = 6 }, { key = "cono", x = 4, y = 6 },
+            { key = "cono", x = -4, y = 12 }, { key = "cono", x = 4, y = 12 },
+            { key = "valla_obra", x = 0, y = 16 }
+        }
+    },
+    mini_parkour = {
+        label = "Mini parkour",
+        items = {
+            { key = "rampa_pequena", x = 0, y = 0, heading = 0 },
+            { key = "plataforma_metal", x = 0, y = 7 },
+            { key = "muro_bajo", x = 0, y = 12 },
+            { key = "rampa_media", x = 0, y = 18, heading = 0 },
+            { key = "plataforma_alta", x = 0, y = 28, z = 2 }
+        }
+    },
+    campamento = {
+        label = "Campamento",
+        items = {
+            { key = "fogata", x = 0, y = 0 },
+            { key = "silla", x = -2, y = -2, heading = 45 },
+            { key = "silla", x = 2, y = -2, heading = -45 },
+            { key = "mesa_picnic", x = 0, y = 4 },
+            { key = "sombrilla", x = 3, y = 4 },
+            { key = "arbol_pino", x = -6, y = 5 }
+        }
+    },
+    zona_meteoritos = {
+        label = "Zona meteoritos",
+        items = {
+            { key = "asteroide_grande", x = 0, y = 0 },
+            { key = "asteroide_pequeno", x = 5, y = 3 },
+            { key = "roca_grande", x = -5, y = 4 },
+            { key = "asteroide_flotante", x = 0, y = 7, z = 7 },
+            { key = "roca_media", x = 7, y = -3 },
+            { key = "roca_media", x = -7, y = -3 }
+        }
+    },
+    escenario_calle = {
+        label = "Escenario calle",
+        items = {
+            { key = "contenedor", x = -5, y = 0 },
+            { key = "dumpster", x = 5, y = 0 },
+            { key = "barrera", x = -3, y = 6 },
+            { key = "valla_obra", x = 3, y = 6 },
+            { key = "senal_stop", x = 0, y = 10 },
+            { key = "barril", x = -2, y = 12 },
+            { key = "caja_grande", x = 2, y = 12 }
+        }
+    },
+    set_youtube = {
+        label = "Set Youtube",
+        items = {
+            { key = "pantalla", x = 0, y = 0 },
+            { key = "altavoz", x = -3, y = 1 },
+            { key = "altavoz", x = 3, y = 1 },
+            { key = "mesa_picnic", x = 0, y = 5 },
+            { key = "silla", x = -2, y = 7 },
+            { key = "silla", x = 2, y = 7 },
+            { key = "sombrilla", x = 0, y = 9 }
+        }
+    }
+}
 function _G.SentexBacanerias.Notify(message)
     if TriggerEvent then
         TriggerEvent('chat:addMessage', {args = {tostring(message)}})
@@ -430,6 +528,100 @@ function _G.SentexBacanerias.Spawn(propKey)
     FreezeEntityPosition(obj, B.FreezeProps)
     B.RememberProp(obj)
     B.Notify("~g~Spawn: " .. tostring(def.label) .. " ~s~(" .. tostring(usedModel) .. ")")
+end
+
+
+function _G.SentexBacanerias.CleanupList()
+    local B = _G.SentexBacanerias
+    for i = #B.SpawnedProps, 1, -1 do
+        local ent = B.SpawnedProps[i]
+        if not ent or ent == 0 or not DoesEntityExist(ent) then
+            table.remove(B.SpawnedProps, i)
+        end
+    end
+end
+
+function _G.SentexBacanerias.CreatePropFromDef(def, coords, heading)
+    local B = _G.SentexBacanerias
+    if not def or not coords then return nil end
+
+    B.CleanupList()
+    if #B.SpawnedProps >= B.MaxProps then
+        B.Notify("~y~Limite de props alcanzado. Usa 'Limpiar bacanerias'.")
+        return nil
+    end
+
+    local hash, usedModel = B.LoadModel(def)
+    if not hash then
+        B.Notify("~r~No se pudo cargar modelo para: " .. tostring(def.label))
+        return nil
+    end
+
+    local obj = CreateObject(hash, coords.x, coords.y, coords.z, B.NetworkedProps, B.NetworkedProps, false)
+    SetModelAsNoLongerNeeded(hash)
+
+    if not obj or obj == 0 then
+        B.Notify("~r~No se pudo crear: " .. tostring(def.label))
+        return nil
+    end
+
+    SetEntityAsMissionEntity(obj, true, true)
+
+    if heading then
+        SetEntityHeading(obj, heading)
+    elseif def.alignToPlayer then
+        SetEntityHeading(obj, GetEntityHeading(PlayerPedId()))
+    end
+
+    if def.placeOnGround ~= false then
+        PlaceObjectOnGroundProperly(obj)
+    end
+
+    FreezeEntityPosition(obj, B.FreezeProps)
+    B.RememberProp(obj)
+    return obj, usedModel
+end
+
+function _G.SentexBacanerias.OffsetFromHeading(base, heading, x, y, z)
+    local rad = math.rad(heading or 0.0)
+    local sinH = math.sin(rad)
+    local cosH = math.cos(rad)
+    local ox = ((x or 0.0) * cosH) - ((y or 0.0) * sinH)
+    local oy = ((x or 0.0) * sinH) + ((y or 0.0) * cosH)
+    return vector3(base.x + ox, base.y + oy, base.z + (z or 0.0))
+end
+
+function _G.SentexBacanerias.SpawnPreset(presetKey)
+    local B = _G.SentexBacanerias
+    local preset = B.Presets[presetKey]
+    if not preset or not preset.items then
+        B.Notify("~r~Preset no encontrado: " .. tostring(presetKey))
+        return
+    end
+
+    B.CleanupList()
+    if (#B.SpawnedProps + #preset.items) > B.MaxProps then
+        B.Notify("~y~No hay espacio para ese preset. Limpia bacanerias o sube el limite en el codigo.")
+        return
+    end
+
+    local base = B.GetSpawnCoords(B.SpawnDistance, 0.0, true)
+    local playerHeading = GetEntityHeading(PlayerPedId())
+    local created = 0
+
+    for _, item in ipairs(preset.items) do
+        local def = B.PropDefs[item.key]
+        if def then
+            local coords = B.OffsetFromHeading(base, playerHeading, item.x or 0.0, item.y or 0.0, item.z or 0.0)
+            local heading = playerHeading + (item.heading or 0.0)
+            if B.CreatePropFromDef(def, coords, heading) then
+                created = created + 1
+            end
+            B.Wait(0)
+        end
+    end
+
+    B.Notify("~g~Preset creado: " .. tostring(preset.label or presetKey) .. " ~s~(" .. tostring(created) .. " props)")
 end
 
 -- Variables para cargar/lanzar vehículos
@@ -1737,18 +1929,53 @@ Menu.Categories = {
         { name = "Rampas", items = {
             { name = "Rampa pequena", type = "action", onClick = function() _G.SentexBacanerias.Spawn("rampa_pequena") end },
             { name = "Rampa media", type = "action", onClick = function() _G.SentexBacanerias.Spawn("rampa_media") end },
-            { name = "Rampa gigante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("rampa_gigante") end }
+            { name = "Rampa gigante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("rampa_gigante") end },
+            { name = "Plataforma metal", type = "action", onClick = function() _G.SentexBacanerias.Spawn("plataforma_metal") end },
+            { name = "Plataforma alta", type = "action", onClick = function() _G.SentexBacanerias.Spawn("plataforma_alta") end },
+            { name = "Muro bajo", type = "action", onClick = function() _G.SentexBacanerias.Spawn("muro_bajo") end }
         }},
         { name = "Asteroides", items = {
             { name = "Asteroide pequeno", type = "action", onClick = function() _G.SentexBacanerias.Spawn("asteroide_pequeno") end },
             { name = "Asteroide grande", type = "action", onClick = function() _G.SentexBacanerias.Spawn("asteroide_grande") end },
-            { name = "Asteroide flotante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("asteroide_flotante") end }
+            { name = "Asteroide flotante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("asteroide_flotante") end },
+            { name = "Roca grande", type = "action", onClick = function() _G.SentexBacanerias.Spawn("roca_grande") end },
+            { name = "Roca media", type = "action", onClick = function() _G.SentexBacanerias.Spawn("roca_media") end }
         }},
-        { name = "Props", items = {
-            { name = "Bola gigante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("bola_gigante") end },
-            { name = "Contenedor", type = "action", onClick = function() _G.SentexBacanerias.Spawn("contenedor") end },
+        { name = "Ciudad", items = {
+            { name = "Cono", type = "action", onClick = function() _G.SentexBacanerias.Spawn("cono") end },
+            { name = "Senal stop", type = "action", onClick = function() _G.SentexBacanerias.Spawn("senal_stop") end },
+            { name = "Valla de obra", type = "action", onClick = function() _G.SentexBacanerias.Spawn("valla_obra") end },
             { name = "Barrera", type = "action", onClick = function() _G.SentexBacanerias.Spawn("barrera") end },
-            { name = "Plataforma", type = "action", onClick = function() _G.SentexBacanerias.Spawn("plataforma") end }
+            { name = "Barril", type = "action", onClick = function() _G.SentexBacanerias.Spawn("barril") end },
+            { name = "Contenedor", type = "action", onClick = function() _G.SentexBacanerias.Spawn("contenedor") end },
+            { name = "Contenedor abierto", type = "action", onClick = function() _G.SentexBacanerias.Spawn("contenedor_abierto") end },
+            { name = "Contenedor basura", type = "action", onClick = function() _G.SentexBacanerias.Spawn("dumpster") end }
+        }},
+        { name = "Deco", items = {
+            { name = "Bola gigante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("bola_gigante") end },
+            { name = "Banco", type = "action", onClick = function() _G.SentexBacanerias.Spawn("banco") end },
+            { name = "Mesa picnic", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mesa_picnic") end },
+            { name = "Silla", type = "action", onClick = function() _G.SentexBacanerias.Spawn("silla") end },
+            { name = "Sombrilla", type = "action", onClick = function() _G.SentexBacanerias.Spawn("sombrilla") end },
+            { name = "Pantalla", type = "action", onClick = function() _G.SentexBacanerias.Spawn("pantalla") end },
+            { name = "Altavoz", type = "action", onClick = function() _G.SentexBacanerias.Spawn("altavoz") end },
+            { name = "Fogata", type = "action", onClick = function() _G.SentexBacanerias.Spawn("fogata") end },
+            { name = "Caja grande", type = "action", onClick = function() _G.SentexBacanerias.Spawn("caja_grande") end },
+            { name = "Tubos", type = "action", onClick = function() _G.SentexBacanerias.Spawn("tubos") end }
+        }},
+        { name = "Naturaleza", items = {
+            { name = "Arbol pino", type = "action", onClick = function() _G.SentexBacanerias.Spawn("arbol_pino") end },
+            { name = "Palmera", type = "action", onClick = function() _G.SentexBacanerias.Spawn("palmera") end },
+            { name = "Cactus", type = "action", onClick = function() _G.SentexBacanerias.Spawn("cactus") end },
+            { name = "Arbusto", type = "action", onClick = function() _G.SentexBacanerias.Spawn("arbusto") end }
+        }},
+        { name = "Presets", items = {
+            { name = "Circuito de conos", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("circuito_conos") end },
+            { name = "Mini parkour", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("mini_parkour") end },
+            { name = "Campamento", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("campamento") end },
+            { name = "Zona meteoritos", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("zona_meteoritos") end },
+            { name = "Escenario calle", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("escenario_calle") end },
+            { name = "Set Youtube", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("set_youtube") end }
         }},
         { name = "Gestion", items = {
             { name = "Distancia spawn", type = "slider", value = 45, min = 10, max = 200, step = 5, onClick = function(value) _G.SentexBacanerias.SetDistance(value) end },
