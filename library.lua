@@ -14,6 +14,15 @@ local function SafeIpairs(value)
     return function() return nil end
 end
 
+local function SafeInvoke(fn, ...)
+    if type(fn) ~= "function" then return true end
+    local ok, err = pcall(fn, ...)
+    if not ok then
+        print("[Library] callback error: " .. tostring(err))
+    end
+    return ok
+end
+
 Menu.Visible = false
 Menu.PreventResetFrame = true
 Menu.MenuToggleKey = nil -- Se asigna mediante la UI al terminar la carga
@@ -1303,9 +1312,9 @@ function Menu.HandleInput()
                                     if it.name == "Modo editor" then Menu.EditorMode = it.value end
                                     if it.name == "Mostrar teclas rápidas" then Menu.ShowKeybinds = it.value end
                                     if it.name == "Copos de nieve" then Menu.ShowSnowflakes = it.value end
-                                    if it.onClick then it.onClick(it.value) end
+                                    if it.onClick then SafeInvoke(it.onClick, it.value) end
                                 elseif it.type=="action" then
-                                    if it.onClick then it.onClick() end
+                                    if it.onClick then SafeInvoke(it.onClick) end
                                 end
                             end
                         end
@@ -1389,13 +1398,13 @@ function Menu.HandleInput()
                         item.value = math.max(item.min or 0, (item.value or 0) - step)
                         if item.name == "Menú suave" then Menu.SmoothFactor = item.value/100 end
                         if item.name == "Tamaño del menú" then Menu.Scale = item.value/100 end
-                        if item.onClick then item.onClick(item.value) end
+                        if item.onClick then SafeInvoke(item.onClick, item.value) end
                     elseif item.type == "selector" then
                         local idx = (item.selected or 1) - 1
                         if idx < 1 then idx = SafeLen(item.options) end
                         item.selected = idx
                         if item.name == "Tema del menú" then Menu.ApplyTheme(item.options[idx]) end
-                        if item.onClick then item.onClick(item.selected, item.options[item.selected]) end
+                        if item.onClick then SafeInvoke(item.onClick, item.selected, item.options[item.selected]) end
                     elseif item.type == "toggle_selector" then
                         local idx = (item.selected or 1) - 1
                         if idx < 1 then idx = SafeLen(item.options) end
@@ -1412,13 +1421,13 @@ function Menu.HandleInput()
                         item.value = math.min(item.max or 100, (item.value or 0) + step)
                         if item.name == "Menú suave" then Menu.SmoothFactor = item.value/100 end
                         if item.name == "Tamaño del menú" then Menu.Scale = item.value/100 end
-                        if item.onClick then item.onClick(item.value) end
+                        if item.onClick then SafeInvoke(item.onClick, item.value) end
                     elseif item.type == "selector" then
                         local idx = (item.selected or 1) + 1
                         if idx > SafeLen(item.options) then idx = 1 end
                         item.selected = idx
                         if item.name == "Tema del menú" then Menu.ApplyTheme(item.options[idx]) end
-                        if item.onClick then item.onClick(item.selected, item.options[item.selected]) end
+                        if item.onClick then SafeInvoke(item.onClick, item.selected, item.options[item.selected]) end
                     elseif item.type == "toggle_selector" then
                         local idx = (item.selected or 1) + 1
                         if idx > SafeLen(item.options) then idx = 1 end
@@ -1479,14 +1488,14 @@ function Menu.HandleInput()
                         if item.name == "Mostrar teclas rápidas" then Menu.ShowKeybinds = item.value end
                         if item.name == "Modo editor" then Menu.EditorMode = item.value end
                         if item.name == "Copos de nieve" then Menu.ShowSnowflakes = item.value end
-                        if item.onClick then item.onClick(item.value) end
+                        if item.onClick then SafeInvoke(item.onClick, item.value) end
                     elseif item.type == "action" then
                         if item.name == "Cambiar tecla de menú" then
                             Menu.BeginMenuKeySelection(false)
                         end
-                        if item.onClick then item.onClick() end
+                        if item.onClick then SafeInvoke(item.onClick) end
                     elseif item.type == "selector" then
-                        if item.onClick then item.onClick(item.selected, item.options[item.selected]) end
+                        if item.onClick then SafeInvoke(item.onClick, item.selected, item.options[item.selected]) end
                     end
                 end
             elseif Menu.IsKeyJustPressed(0x78) then  -- F9
@@ -2127,7 +2136,7 @@ function Menu.DrawInputWindow()
     Menu.DrawText(boxX+10, boxY+5, display, 15, Menu.Colors.Text.r/255.0, Menu.Colors.Text.g/255.0, Menu.Colors.Text.b/255.0, 255)
     if Menu.IsKeyJustPressed(0x0D) then
         Menu.InputOpen = false
-        if Menu.InputCallback then Menu.InputCallback(Menu.InputText) end
+        if Menu.InputCallback then SafeInvoke(Menu.InputCallback, Menu.InputText) end
     end
     if Menu.IsKeyJustPressed(0x08) then
         Menu.InputText = string.sub(Menu.InputText,1,-2)
