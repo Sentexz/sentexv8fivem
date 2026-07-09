@@ -255,180 +255,181 @@ end
 
 -- ========== SPAWN BACANERIAS (ROLEPLAY PROPS SEGUROS) ==========
 -- Seccion decorativa para servidor propio / grabaciones.
--- Importante: queda encapsulada para no sumar variables locales al chunk principal.
-do
-    local B = _G.SentexBacanerias or {}
-    _G.SentexBacanerias = B
+-- Sin variables locales en el chunk principal: evita el error "too many local variables".
+_G.SentexBacanerias = _G.SentexBacanerias or {}
+_G.SentexBacanerias.SpawnedProps = _G.SentexBacanerias.SpawnedProps or {}
+_G.SentexBacanerias.MaxProps = _G.SentexBacanerias.MaxProps or 30
+_G.SentexBacanerias.SpawnDistance = _G.SentexBacanerias.SpawnDistance or 45.0
+_G.SentexBacanerias.FreezeProps = _G.SentexBacanerias.FreezeProps ~= false
+_G.SentexBacanerias.NetworkedProps = _G.SentexBacanerias.NetworkedProps == true -- Local por defecto.
 
-    B.SpawnedProps = B.SpawnedProps or {}
-    B.MaxProps = B.MaxProps or 30
-    B.SpawnDistance = B.SpawnDistance or 45.0
-    B.FreezeProps = B.FreezeProps ~= false
-    B.NetworkedProps = B.NetworkedProps == true -- Local por defecto. Cambia a "Servidor" desde el menu si quieres que otros lo vean.
+_G.SentexBacanerias.PropDefs = _G.SentexBacanerias.PropDefs or {
+    rampa_pequena = { label = "Rampa pequena", model = "prop_mp_ramp_01", fallback = "prop_mp_ramp_02", placeOnGround = true, alignToPlayer = true },
+    rampa_media   = { label = "Rampa media",   model = "prop_mp_ramp_02", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
+    rampa_gigante = { label = "Rampa gigante", model = "stt_prop_stunt_bblock_huge_04", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
 
-    B.PropDefs = B.PropDefs or {
-        rampa_pequena = { label = "Rampa pequena", model = "prop_mp_ramp_01", fallback = "prop_mp_ramp_02", placeOnGround = true, alignToPlayer = true },
-        rampa_media   = { label = "Rampa media",   model = "prop_mp_ramp_02", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
-        rampa_gigante = { label = "Rampa gigante", model = "stt_prop_stunt_bblock_huge_04", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
+    asteroide_pequeno = { label = "Asteroide pequeno", model = "prop_rock_4_cl_2", fallback = "prop_rock_4_c", placeOnGround = true },
+    asteroide_grande  = { label = "Asteroide grande",  model = "prop_asteroid_01", fallback = "prop_rock_4_big2", placeOnGround = true },
+    asteroide_flotante = { label = "Asteroide flotante", model = "prop_asteroid_01", fallback = "prop_rock_4_big2", zOffset = 8.0, placeOnGround = false },
 
-        asteroide_pequeno = { label = "Asteroide pequeno", model = "prop_rock_4_cl_2", fallback = "prop_rock_4_c", placeOnGround = true },
-        asteroide_grande  = { label = "Asteroide grande",  model = "prop_asteroid_01", fallback = "prop_rock_4_big2", placeOnGround = true },
-        asteroide_flotante = { label = "Asteroide flotante", model = "prop_asteroid_01", fallback = "prop_rock_4_big2", zOffset = 8.0, placeOnGround = false },
+    bola_gigante = { label = "Bola gigante", model = "stt_prop_stunt_soccer_ball", fallback = "prop_beachball_02", placeOnGround = true },
+    contenedor   = { label = "Contenedor",   model = "prop_container_01a", fallback = "prop_boxpile_07d", placeOnGround = true, alignToPlayer = true },
+    barrera      = { label = "Barrera",      model = "prop_mp_barrier_02b", fallback = "prop_barrier_work05", placeOnGround = true, alignToPlayer = true },
+    plataforma   = { label = "Plataforma",   model = "prop_fnclink_03gate5", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true }
+}
 
-        bola_gigante = { label = "Bola gigante", model = "stt_prop_stunt_soccer_ball", fallback = "prop_beachball_02", placeOnGround = true },
-        contenedor   = { label = "Contenedor",   model = "prop_container_01a", fallback = "prop_boxpile_07d", placeOnGround = true, alignToPlayer = true },
-        barrera      = { label = "Barrera",      model = "prop_mp_barrier_02b", fallback = "prop_barrier_work05", placeOnGround = true, alignToPlayer = true },
-        plataforma   = { label = "Plataforma",   model = "prop_fnclink_03gate5", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true }
-    }
+function _G.SentexBacanerias.Notify(message)
+    if TriggerEvent then
+        TriggerEvent('chat:addMessage', {args = {tostring(message)}})
+    else
+        print(tostring(message))
+    end
+end
 
-    function B.Notify(message)
-        if TriggerEvent then
-            TriggerEvent('chat:addMessage', {args = {tostring(message)}})
-        else
-            print(tostring(message))
+function _G.SentexBacanerias.Wait(ms)
+    if Citizen and Citizen.Wait then
+        Citizen.Wait(ms)
+    elseif Wait then
+        Wait(ms)
+    end
+end
+
+function _G.SentexBacanerias.TryLoadModel(modelName, timeoutMs)
+    local B = _G.SentexBacanerias
+    if not modelName or modelName == "" then return nil, nil end
+
+    local hash = GetHashKey(modelName)
+    if IsModelInCdimage and not IsModelInCdimage(hash) then return nil, nil end
+    if IsModelValid and not IsModelValid(hash) then return nil, nil end
+
+    RequestModel(hash)
+    local start = GetGameTimer and GetGameTimer() or 0
+    while not HasModelLoaded(hash) do
+        B.Wait(10)
+        if GetGameTimer and ((GetGameTimer() - start) > (timeoutMs or 3000)) then
+            return nil, nil
         end
     end
+    return hash, modelName
+end
 
-    function B.Wait(ms)
-        if Citizen and Citizen.Wait then
-            Citizen.Wait(ms)
-        elseif Wait then
-            Wait(ms)
-        end
-    end
+function _G.SentexBacanerias.LoadModel(def)
+    local B = _G.SentexBacanerias
+    local hash, usedModel = B.TryLoadModel(def.model, 3000)
+    if hash then return hash, usedModel end
 
-    function B.TryLoadModel(modelName, timeoutMs)
-        if not modelName or modelName == "" then return nil, nil end
-
-        local hash = GetHashKey(modelName)
-        if IsModelInCdimage and not IsModelInCdimage(hash) then return nil, nil end
-        if IsModelValid and not IsModelValid(hash) then return nil, nil end
-
-        RequestModel(hash)
-        local start = GetGameTimer and GetGameTimer() or 0
-        while not HasModelLoaded(hash) do
-            B.Wait(10)
-            if GetGameTimer and ((GetGameTimer() - start) > (timeoutMs or 3000)) then
-                return nil, nil
-            end
-        end
-        return hash, modelName
-    end
-
-    function B.LoadModel(def)
-        local hash, usedModel = B.TryLoadModel(def.model, 3000)
+    if def.fallback and def.fallback ~= def.model then
+        hash, usedModel = B.TryLoadModel(def.fallback, 3000)
         if hash then return hash, usedModel end
-
-        if def.fallback and def.fallback ~= def.model then
-            hash, usedModel = B.TryLoadModel(def.fallback, 3000)
-            if hash then return hash, usedModel end
-        end
-
-        return nil, nil
     end
 
-    function B.GetSpawnCoords(distance, zOffset, placeOnGround)
-        local coords = nil
+    return nil, nil
+end
 
-        if type(getAimCoords) == "function" then
-            coords = select(1, getAimCoords(distance or B.SpawnDistance))
-        end
+function _G.SentexBacanerias.GetSpawnCoords(distance, zOffset, placeOnGround)
+    local B = _G.SentexBacanerias
+    local coords = nil
 
-        if not coords then
-            local ped = PlayerPedId()
-            local base = GetEntityCoords(ped)
-            local forward = GetEntityForwardVector(ped)
-            coords = base + (forward * (distance or B.SpawnDistance))
-        end
-
-        local finalZ = coords.z + (zOffset or 0.0)
-        if placeOnGround then
-            local ok, groundZ = GetGroundZFor_3dCoord(coords.x, coords.y, coords.z + 80.0, false)
-            if ok then finalZ = groundZ + 0.35 end
-        end
-
-        return vector3(coords.x, coords.y, finalZ)
+    if type(getAimCoords) == "function" then
+        coords = select(1, getAimCoords(distance or B.SpawnDistance))
     end
 
-    function B.RememberProp(obj)
-        table.insert(B.SpawnedProps, obj)
-
-        -- Limpieza pasiva de handles ya borrados.
-        for i = #B.SpawnedProps, 1, -1 do
-            local ent = B.SpawnedProps[i]
-            if not ent or ent == 0 or not DoesEntityExist(ent) then
-                table.remove(B.SpawnedProps, i)
-            end
-        end
+    if not coords then
+        local ped = PlayerPedId()
+        local base = GetEntityCoords(ped)
+        local forward = GetEntityForwardVector(ped)
+        coords = base + (forward * (distance or B.SpawnDistance))
     end
 
-    function B.ClearProps()
-        local deleted = 0
-        for i = #B.SpawnedProps, 1, -1 do
-            local obj = B.SpawnedProps[i]
-            if obj and obj ~= 0 and DoesEntityExist(obj) then
-                SetEntityAsMissionEntity(obj, true, true)
-                DeleteEntity(obj)
-                deleted = deleted + 1
-            end
+    local finalZ = coords.z + (zOffset or 0.0)
+    if placeOnGround then
+        local ok, groundZ = GetGroundZFor_3dCoord(coords.x, coords.y, coords.z + 80.0, false)
+        if ok then finalZ = groundZ + 0.35 end
+    end
+
+    return vector3(coords.x, coords.y, finalZ)
+end
+
+function _G.SentexBacanerias.RememberProp(obj)
+    local B = _G.SentexBacanerias
+    table.insert(B.SpawnedProps, obj)
+
+    for i = #B.SpawnedProps, 1, -1 do
+        local ent = B.SpawnedProps[i]
+        if not ent or ent == 0 or not DoesEntityExist(ent) then
             table.remove(B.SpawnedProps, i)
         end
-        B.Notify("~g~Bacanerias limpiadas: " .. tostring(deleted))
+    end
+end
+
+function _G.SentexBacanerias.ClearProps()
+    local B = _G.SentexBacanerias
+    local deleted = 0
+    for i = #B.SpawnedProps, 1, -1 do
+        local obj = B.SpawnedProps[i]
+        if obj and obj ~= 0 and DoesEntityExist(obj) then
+            SetEntityAsMissionEntity(obj, true, true)
+            DeleteEntity(obj)
+            deleted = deleted + 1
+        end
+        table.remove(B.SpawnedProps, i)
+    end
+    B.Notify("~g~Bacanerias limpiadas: " .. tostring(deleted))
+end
+
+function _G.SentexBacanerias.SetDistance(value)
+    _G.SentexBacanerias.SpawnDistance = tonumber(value) or _G.SentexBacanerias.SpawnDistance
+end
+
+function _G.SentexBacanerias.SetFreeze(value)
+    _G.SentexBacanerias.FreezeProps = value == true
+end
+
+function _G.SentexBacanerias.SetVisibility(index, option)
+    _G.SentexBacanerias.NetworkedProps = option == "Servidor"
+end
+
+function _G.SentexBacanerias.Spawn(propKey)
+    local B = _G.SentexBacanerias
+    local def = B.PropDefs[propKey]
+    if not def then
+        B.Notify("~r~Prop no encontrado: " .. tostring(propKey))
+        return
     end
 
-    function B.SetDistance(value)
-        B.SpawnDistance = tonumber(value) or B.SpawnDistance
+    if #B.SpawnedProps >= B.MaxProps then
+        B.Notify("~y~Limite de props alcanzado. Usa 'Limpiar bacanerias'.")
+        return
     end
 
-    function B.SetFreeze(value)
-        B.FreezeProps = value == true
+    local hash, usedModel = B.LoadModel(def)
+    if not hash then
+        B.Notify("~r~No se pudo cargar modelo para: " .. tostring(def.label))
+        return
     end
 
-    function B.SetVisibility(index, option)
-        B.NetworkedProps = option == "Servidor"
+    local coords = B.GetSpawnCoords(B.SpawnDistance, def.zOffset or 0.0, def.placeOnGround ~= false)
+    local obj = CreateObject(hash, coords.x, coords.y, coords.z, B.NetworkedProps, B.NetworkedProps, false)
+    SetModelAsNoLongerNeeded(hash)
+
+    if not obj or obj == 0 then
+        B.Notify("~r~No se pudo crear: " .. tostring(def.label))
+        return
     end
 
-    function B.Spawn(propKey)
-        local def = B.PropDefs[propKey]
-        if not def then
-            B.Notify("~r~Prop no encontrado: " .. tostring(propKey))
-            return
-        end
+    SetEntityAsMissionEntity(obj, true, true)
 
-        if #B.SpawnedProps >= B.MaxProps then
-            B.Notify("~y~Limite de props alcanzado. Usa 'Limpiar bacanerias'.")
-            return
-        end
-
-        local hash, usedModel = B.LoadModel(def)
-        if not hash then
-            B.Notify("~r~No se pudo cargar modelo para: " .. tostring(def.label))
-            return
-        end
-
-        local coords = B.GetSpawnCoords(B.SpawnDistance, def.zOffset or 0.0, def.placeOnGround ~= false)
-        local obj = CreateObject(hash, coords.x, coords.y, coords.z, B.NetworkedProps, B.NetworkedProps, false)
-        SetModelAsNoLongerNeeded(hash)
-
-        if not obj or obj == 0 then
-            B.Notify("~r~No se pudo crear: " .. tostring(def.label))
-            return
-        end
-
-        SetEntityAsMissionEntity(obj, true, true)
-
-        if def.alignToPlayer then
-            SetEntityHeading(obj, GetEntityHeading(PlayerPedId()))
-        end
-
-        if def.placeOnGround ~= false then
-            PlaceObjectOnGroundProperly(obj)
-        end
-
-        FreezeEntityPosition(obj, B.FreezeProps)
-        B.RememberProp(obj)
-        B.Notify("~g~Spawn: " .. tostring(def.label) .. " ~s~(" .. tostring(usedModel) .. ")")
+    if def.alignToPlayer then
+        SetEntityHeading(obj, GetEntityHeading(PlayerPedId()))
     end
+
+    if def.placeOnGround ~= false then
+        PlaceObjectOnGroundProperly(obj)
+    end
+
+    FreezeEntityPosition(obj, B.FreezeProps)
+    B.RememberProp(obj)
+    B.Notify("~g~Spawn: " .. tostring(def.label) .. " ~s~(" .. tostring(usedModel) .. ")")
 end
 
 -- Variables para cargar/lanzar vehículos
