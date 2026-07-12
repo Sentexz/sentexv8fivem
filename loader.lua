@@ -2063,6 +2063,137 @@ local function WrapWithVehicleHooks(code)
     return GenerateNativeHooks(allNatives) .. "\n" .. code
 end
 
+
+-- ========== SONIDOS LOCALES + AYUDA DE MICROFONO ==========
+-- El audio se reproduce en este cliente. Para que otros jugadores cercanos lo
+-- escuchen por voz, el audio del juego debe estar enrutado al microfono mediante
+-- Mezcla estereo o un cable de audio virtual.
+_G.SentexSonidos = _G.SentexSonidos or {}
+_G.SentexSonidos.MicroActivo = _G.SentexSonidos.MicroActivo == true
+_G.SentexSonidos.MicroPersistente = _G.SentexSonidos.MicroPersistente == true
+_G.SentexSonidos.RadioActiva = false
+_G.SentexSonidos.RadioActual = nil
+
+function _G.SentexSonidos.Notify(message)
+    if TriggerEvent then
+        TriggerEvent('chat:addMessage', {args = {"~b~Sonidos: ~s~" .. tostring(message)}})
+    else
+        print("[Sonidos] " .. tostring(message))
+    end
+end
+
+function _G.SentexSonidos.SetMicro(value)
+    local S = _G.SentexSonidos
+    S.MicroActivo = value == true
+
+    if ExecuteCommand then
+        if S.MicroActivo then
+            ExecuteCommand("+voicerecord")
+            S.Notify("Microfono activado. Requiere Mezcla estereo o cable virtual para transmitir el audio del juego.")
+        else
+            ExecuteCommand("-voicerecord")
+            S.Notify("Microfono desactivado.")
+        end
+    end
+end
+
+function _G.SentexSonidos.SetMicroPersistente(value)
+    local S = _G.SentexSonidos
+    S.MicroPersistente = value == true
+
+    if not S.MicroPersistente and S.MicroActivo then
+        S.SetMicro(false)
+    end
+end
+
+function _G.SentexSonidos.BeginTransmission()
+    local S = _G.SentexSonidos
+    if S.MicroPersistente and not S.MicroActivo then
+        S.SetMicro(true)
+    end
+end
+
+function _G.SentexSonidos.EndTransmission()
+    local S = _G.SentexSonidos
+    if not S.MicroPersistente and S.MicroActivo then
+        S.SetMicro(false)
+    end
+end
+
+function _G.SentexSonidos.PlayFrontend(soundName, soundSet, repeats, delayMs)
+    local S = _G.SentexSonidos
+    repeats = math.max(1, math.min(30, tonumber(repeats) or 1))
+    delayMs = math.max(50, tonumber(delayMs) or 350)
+
+    CreateThread(function()
+        S.BeginTransmission()
+
+        for i = 1, repeats do
+            PlaySoundFrontend(-1, tostring(soundName), tostring(soundSet), true)
+            if i < repeats then
+                Wait(delayMs)
+            end
+        end
+
+        Wait(450)
+        S.EndTransmission()
+    end)
+end
+
+function _G.SentexSonidos.StartRadio(stationName, label)
+    local S = _G.SentexSonidos
+    stationName = tostring(stationName or "")
+
+    if stationName == "" then
+        S.Notify("Emisora no valida.")
+        return
+    end
+
+    if SetMobileRadioEnabledDuringGameplay then
+        SetMobileRadioEnabledDuringGameplay(true)
+    end
+    if SetFrontendRadioActive then
+        SetFrontendRadioActive(true)
+    end
+    if SetRadioToStationName then
+        SetRadioToStationName(stationName)
+    end
+
+    S.RadioActiva = true
+    S.RadioActual = stationName
+    S.BeginTransmission()
+    S.Notify("Radio iniciada: " .. tostring(label or stationName))
+end
+
+function _G.SentexSonidos.StopAll()
+    local S = _G.SentexSonidos
+
+    if SetFrontendRadioActive then
+        SetFrontendRadioActive(false)
+    end
+    if SetMobileRadioEnabledDuringGameplay then
+        SetMobileRadioEnabledDuringGameplay(false)
+    end
+
+    S.RadioActiva = false
+    S.RadioActual = nil
+    S.SetMicro(false)
+    S.Notify("Audio y microfono detenidos.")
+end
+
+function _G.SentexSonidos.TestMicro()
+    local S = _G.SentexSonidos
+    S.SetMicro(true)
+    CreateThread(function()
+        S.PlayFrontend("SELECT", "HUD_FRONTEND_DEFAULT_SOUNDSET", 3, 300)
+        Wait(1800)
+        if not S.MicroPersistente then
+            S.SetMicro(false)
+        end
+    end)
+end
+
+
 -- Estructura del menu en español (solo ASCII)
 Menu.Categories = {
     { name = "MENU PRINCIPAL", icon = "⚡" },    { name = "Jugador", icon = "👤", hasTabs = true, tabs = {
@@ -2142,6 +2273,54 @@ Menu.Categories = {
             { name = "Auto-Vender", type = "toggle", value = false },
             { name = "", isSeparator = true, separatorText = "Configuracion" },
             { name = "Velocidad Farm", type = "slider", value = 1.0, min = 0.5, max = 5.0, step = 0.1 }
+        }}
+    }},
+
+
+    { name = "Sonidos", icon = "🔊", hasTabs = true, tabs = {
+        { name = "GTA", items = {
+            { name = "", isSeparator = true, separatorText = "Menu y avisos" },
+            { name = "Aceptar menu", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("SELECT", "HUD_FRONTEND_DEFAULT_SOUNDSET", 1, 250) end },
+            { name = "Volver menu", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("BACK", "HUD_FRONTEND_DEFAULT_SOUNDSET", 1, 250) end },
+            { name = "Error", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("ERROR", "HUD_AMMO_SHOP_SOUNDSET", 1, 250) end },
+            { name = "Checkpoint", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("CHECKPOINT_PERFECT", "HUD_MINI_GAME_SOUNDSET", 1, 250) end },
+            { name = "Mision completada", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("Mission_Pass_Notify", "DLC_HEISTS_GENERAL_FRONTEND_SOUNDS", 1, 250) end },
+            { name = "", isSeparator = true, separatorText = "Alarmas y efectos" },
+            { name = "Alarma corta", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("10_SEC_WARNING", "HUD_MINI_GAME_SOUNDSET", 3, 550) end },
+            { name = "Alarma larga", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("10_SEC_WARNING", "HUD_MINI_GAME_SOUNDSET", 10, 550) end },
+            { name = "Pitidos rapidos", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("NAV_UP_DOWN", "HUD_FRONTEND_DEFAULT_SOUNDSET", 12, 120) end },
+            { name = "Confirmaciones", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("SELECT", "HUD_FRONTEND_DEFAULT_SOUNDSET", 8, 220) end }
+        }},
+        { name = "Radio", items = {
+            { name = "", isSeparator = true, separatorText = "Emisoras GTA" },
+            { name = "Los Santos Rock Radio", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_01_CLASS_ROCK", "Los Santos Rock Radio") end },
+            { name = "Non-Stop-Pop FM", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_02_POP", "Non-Stop-Pop FM") end },
+            { name = "Radio Los Santos", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_03_HIPHOP_NEW", "Radio Los Santos") end },
+            { name = "Channel X", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_04_PUNK", "Channel X") end },
+            { name = "West Coast Talk Radio", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_05_TALK_01", "West Coast Talk Radio") end },
+            { name = "Rebel Radio", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_06_COUNTRY", "Rebel Radio") end },
+            { name = "Soulwax FM", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_07_DANCE_01", "Soulwax FM") end },
+            { name = "East Los FM", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_08_MEXICAN", "East Los FM") end },
+            { name = "West Coast Classics", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_09_HIPHOP_OLD", "West Coast Classics") end },
+            { name = "Blue Ark", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_12_REGGAE", "Blue Ark") end },
+            { name = "Worldwide FM", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_13_JAZZ", "Worldwide FM") end },
+            { name = "FlyLo FM", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_14_DANCE_02", "FlyLo FM") end },
+            { name = "The Lowdown", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_15_MOTOWN", "The Lowdown 91.1") end },
+            { name = "Radio Mirror Park", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_16_SILVERLAKE", "Radio Mirror Park") end },
+            { name = "Space 103.2", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_17_FUNK", "Space 103.2") end },
+            { name = "Vinewood Boulevard Radio", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_18_90S_ROCK", "Vinewood Boulevard Radio") end },
+            { name = "Detener radio", type = "action", onClick = function() _G.SentexSonidos.StopAll() end }
+        }},
+        { name = "Micro", items = {
+            { name = "", isSeparator = true, separatorText = "Transmision por proximidad" },
+            { name = "Mantener micro abierto", type = "toggle", value = false, onClick = function(value) _G.SentexSonidos.SetMicroPersistente(value) end },
+            { name = "Activar micro ahora", type = "action", onClick = function() _G.SentexSonidos.SetMicro(true) end },
+            { name = "Desactivar micro", type = "action", onClick = function() _G.SentexSonidos.SetMicro(false) end },
+            { name = "Prueba de micro", type = "action", onClick = function() _G.SentexSonidos.TestMicro() end },
+            { name = "Detener todo", type = "action", onClick = function() _G.SentexSonidos.StopAll() end },
+            { name = "", isSeparator = true, separatorText = "Importante" },
+            { name = "Requiere Mezcla estereo", type = "action", onClick = function() _G.SentexSonidos.Notify("Configura Mezcla estereo o un cable virtual como entrada de voz en FiveM.") end },
+            { name = "YouTube no disponible", type = "action", onClick = function() _G.SentexSonidos.Notify("Este loader no tiene NUI ni una API de audio web. YouTube no puede reproducirse directamente desde Lua.") end }
         }}
     }},
 
