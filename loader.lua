@@ -306,7 +306,7 @@ _G.SentexBacanerias.PropDefs = _G.SentexBacanerias.PropDefs or {
     arbol_pino = { label = "Arbol pino", model = "prop_tree_pine_01", fallback = "prop_tree_eng_oak_01", placeOnGround = true },
     palmera = { label = "Palmera", model = "prop_palm_fan_03_b", fallback = "prop_palm_sm_01a", placeOnGround = true },
     cactus = { label = "Cactus", model = "prop_cactus_01a", fallback = "prop_cactus_02", placeOnGround = true },
-    arbusto = { label = "Arbusto", model = "prop_bush_lrg_01", fallback = "prop_bush_med_03", placeOnGround = true }
+    arbusto = { label = "Arbusto", model = "prop_bush_lrg_01", fallback = "prop_bush_med_03", placeOnGround = true },
 
     -- Construcciones grandes / enormes
     mega_bloque_01 = { label = "Mega bloque 01", model = "stt_prop_stunt_bblock_huge_01", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
