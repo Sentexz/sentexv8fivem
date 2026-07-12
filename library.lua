@@ -62,6 +62,8 @@ Menu.SmoothScrollCatY = 0
 Menu.SmoothScrollItemY = 0
 Menu.PlayerInfoAlpha = 0.0
 Menu.PlayerInfo = nil
+Menu.BacaneriasInfoAlpha = 0.0
+Menu.BacaneriasInfo = nil
 Menu.GradientType = 1
 Menu.ScrollbarPosition = 1
 
@@ -199,6 +201,9 @@ function Menu.ApplyTheme(themeName)
     end
     if Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled and Menu.PlayerInfoBanner.imageUrl then
         Menu.LoadPlayerInfoBannerTexture(Menu.PlayerInfoBanner.imageUrl)
+    end
+    if Menu.BacaneriasInfoBanner and Menu.BacaneriasInfoBanner.enabled and Menu.BacaneriasInfoBanner.imageUrl and Menu.LoadBacaneriasInfoBannerTexture then
+        Menu.LoadBacaneriasInfoBannerTexture(Menu.BacaneriasInfoBanner.imageUrl)
     end
     if Menu.KeySelectorBanner and Menu.KeySelectorBanner.enabled and Menu.KeySelectorBanner.imageUrl and Menu.LoadKeySelectorBannerTexture then
         Menu.LoadKeySelectorBannerTexture(Menu.KeySelectorBanner.imageUrl)
@@ -1585,6 +1590,15 @@ Menu.playerInfoBannerTexture = nil
 Menu.playerInfoBannerWidth = 0
 Menu.playerInfoBannerHeight = 0
 
+Menu.BacaneriasInfoBanner = {
+    enabled = true,
+    imageUrl = "https://i.imgur.com/WWNiCPK.png",
+    height = 58
+}
+Menu.bacaneriasInfoBannerTexture = nil
+Menu.bacaneriasInfoBannerWidth = 0
+Menu.bacaneriasInfoBannerHeight = 0
+
 Menu.KeySelectorBanner = {
     enabled = true,
     imageUrl = "https://i.imgur.com/feEx8tj.jpeg",
@@ -1626,6 +1640,22 @@ function Menu.LoadPlayerInfoBannerTexture(url)
     end)
 end
 
+
+function Menu.LoadBacaneriasInfoBannerTexture(url)
+    if not url or url == "" then return end
+    if not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
+    CreateThread(function()
+        local status, body = Susano.HttpGet(url)
+        if status == 200 and body and #body > 0 then
+            local tex, w, h = Susano.LoadTextureFromBuffer(body)
+            if tex and tex ~= 0 then
+                Menu.bacaneriasInfoBannerTexture = tex
+                Menu.bacaneriasInfoBannerWidth = w
+                Menu.bacaneriasInfoBannerHeight = h
+            end
+        end
+    end)
+end
 
 function Menu.LoadKeySelectorBannerTexture(url)
     if not url or url == "" then return end
@@ -1760,6 +1790,120 @@ function Menu.UpdateHoveredPlayerInfo()
     Menu.PlayerInfoAlpha = Menu.ExpApproach(Menu.PlayerInfoAlpha or 0, 1.0, 9.0)
 end
 
+function Menu.IsBacaneriasCategory(cat, tab)
+    local c = cat and cat.name and string.lower(tostring(cat.name)) or ""
+    local t = tab and tab.name and string.lower(tostring(tab.name)) or ""
+    c = c:gsub("á", "a"):gsub("é", "e"):gsub("í", "i"):gsub("ó", "o"):gsub("ú", "u")
+    t = t:gsub("á", "a"):gsub("é", "e"):gsub("í", "i"):gsub("ó", "o"):gsub("ú", "u")
+    return c:find("spawn bacanerias", 1, true) ~= nil or c:find("bacanerias", 1, true) ~= nil
+        or t:find("bacanerias", 1, true) ~= nil
+end
+
+local function _NormalizeBacaneriaName(value)
+    local s = string.lower(tostring(value or ""))
+    s = s:gsub("á", "a"):gsub("é", "e"):gsub("í", "i"):gsub("ó", "o"):gsub("ú", "u"):gsub("ñ", "n")
+    s = s:gsub("[^%w%s]", " "):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+    return s
+end
+
+local function _FindBacaneriaDefinition(item)
+    local B = rawget(_G, "SentexBacanerias")
+    if type(B) ~= "table" or type(item) ~= "table" then return nil, nil, nil end
+
+    local explicitKey = item.propKey or item.bacaneriaKey or item.presetKey
+    if explicitKey and type(B.PropDefs) == "table" and B.PropDefs[explicitKey] then
+        return "PROP", explicitKey, B.PropDefs[explicitKey]
+    end
+    if explicitKey and type(B.Presets) == "table" and B.Presets[explicitKey] then
+        return "PRESET", explicitKey, B.Presets[explicitKey]
+    end
+
+    local wanted = _NormalizeBacaneriaName(item.name or item.label or item.text)
+    if wanted == "" then return nil, nil, nil end
+
+    if type(B.PropDefs) == "table" then
+        for key, def in pairs(B.PropDefs) do
+            if type(def) == "table" and (_NormalizeBacaneriaName(def.label) == wanted or _NormalizeBacaneriaName(key) == wanted) then
+                return "PROP", key, def
+            end
+        end
+    end
+    if type(B.Presets) == "table" then
+        for key, preset in pairs(B.Presets) do
+            if type(preset) == "table" and (_NormalizeBacaneriaName(preset.label) == wanted or _NormalizeBacaneriaName(key) == wanted) then
+                return "PRESET", key, preset
+            end
+        end
+    end
+    return nil, nil, nil
+end
+
+function Menu.UpdateHoveredBacaneriasInfo()
+    local item, cat, tab = Menu.GetCurrentSelectedItem()
+    if not Menu.Visible or not Menu.IsBacaneriasCategory(cat, tab) or not item or item.isSeparator then
+        Menu.BacaneriasInfo = nil
+        Menu.BacaneriasInfoAlpha = Menu.ExpApproach(Menu.BacaneriasInfoAlpha or 0, 0.0, 12.0)
+        return
+    end
+
+    local kind, key, def = _FindBacaneriaDefinition(item)
+    local B = rawget(_G, "SentexBacanerias") or {}
+    local custom = item.bacaneriaInfo or item.info or item.description
+    local info = {
+        title = tostring(item.name or "Bacanería"),
+        tab = tostring(tab and tab.name or "General"),
+        kind = kind or (item.type == "action" and "ACCIÓN" or string.upper(tostring(item.type or "OPCIÓN"))),
+        key = key or "-",
+        description = custom,
+        model = "-",
+        fallback = "-",
+        details = ""
+    }
+
+    if kind == "PROP" and type(def) == "table" then
+        info.title = tostring(def.label or item.name or key)
+        info.model = tostring(def.model or "-")
+        info.fallback = tostring(def.fallback or "-")
+        if not info.description or info.description == "" then
+            local placement = def.placeOnGround == false and "Se crea a la altura configurada" or "Se coloca automáticamente sobre el suelo"
+            local orientation = def.alignToPlayer and " y se orienta como el jugador." or "."
+            info.description = placement .. orientation
+        end
+        local z = tonumber(def.zOffset) or 0.0
+        info.details = string.format("Z: %.1f  |  Congelado: %s  |  Visibilidad: %s", z, B.FreezeProps == false and "NO" or "SÍ", B.NetworkedProps == true and "SERVIDOR" or "LOCAL")
+    elseif kind == "PRESET" and type(def) == "table" then
+        local count = type(def.items) == "table" and #def.items or 0
+        info.title = tostring(def.label or item.name or key)
+        info.model = tostring(count) .. " elementos"
+        info.fallback = "Conjunto completo"
+        if not info.description or info.description == "" then
+            info.description = "Genera una composición completa de props alrededor del punto de aparición, respetando la orientación del jugador."
+        end
+        info.details = string.format("Distancia: %.0f m  |  Congelado: %s  |  Visibilidad: %s", tonumber(B.SpawnDistance) or 45.0, B.FreezeProps == false and "NO" or "SÍ", B.NetworkedProps == true and "SERVIDOR" or "LOCAL")
+    else
+        if not info.description or info.description == "" then
+            local name = _NormalizeBacaneriaName(item.name)
+            if name:find("distancia", 1, true) then
+                info.description = "Ajusta a qué distancia del jugador o del punto de mira aparecerán los props y presets."
+            elseif name:find("congel", 1, true) then
+                info.description = "Activa o desactiva la inmovilización de los objetos recién creados."
+            elseif name:find("visibilidad", 1, true) then
+                info.description = "Elige si los objetos se crean localmente o como entidades de red visibles para el servidor."
+            elseif name:find("limpiar", 1, true) then
+                info.description = "Elimina todos los props creados desde Spawn Bacanerías y limpia su lista interna."
+            else
+                info.description = "Opción de control de Spawn Bacanerías."
+            end
+        end
+        info.model = tostring(item.value ~= nil and item.value or "-")
+        info.fallback = tostring(item.type or "opción")
+        info.details = "Pestaña: " .. tostring(tab and tab.name or "General")
+    end
+
+    Menu.BacaneriasInfo = info
+    Menu.BacaneriasInfoAlpha = Menu.ExpApproach(Menu.BacaneriasInfoAlpha or 0, 1.0, 9.0)
+end
+
 -- Copos independientes para los paneles secundarios. Comparten el mismo
 -- aspecto, velocidad y estado Menu.ShowSnowflakes del menú principal.
 local function _CreatePanelSnow(count)
@@ -1778,6 +1922,7 @@ local function _CreatePanelSnow(count)
 end
 
 Menu.PlayerInfoParticles = Menu.PlayerInfoParticles or _CreatePanelSnow(26)
+Menu.BacaneriasInfoParticles = Menu.BacaneriasInfoParticles or _CreatePanelSnow(28)
 Menu.LoadedNoticeParticles = Menu.LoadedNoticeParticles or _CreatePanelSnow(34)
 Menu.KeySelectorParticles = Menu.KeySelectorParticles or _CreatePanelSnow(30)
 
@@ -1971,6 +2116,96 @@ function Menu.DrawPlayerInfoPanel()
     )
 end
 
+local function _WrapPanelText(text, maxChars, maxLines)
+    text = tostring(text or "-")
+    maxChars = maxChars or 36
+    maxLines = maxLines or 4
+    local lines, current = {}, ""
+    for word in text:gmatch("%S+") do
+        local candidate = current == "" and word or (current .. " " .. word)
+        if #candidate > maxChars and current ~= "" then
+            lines[#lines + 1] = current
+            current = word
+            if #lines >= maxLines then break end
+        else
+            current = candidate
+        end
+    end
+    if #lines < maxLines and current ~= "" then lines[#lines + 1] = current end
+    if #lines == maxLines then
+        local consumed = table.concat(lines, " ")
+        if #consumed < #text then lines[#lines] = _CompactText(lines[#lines], math.max(4, maxChars - 1)) end
+    end
+    return lines
+end
+
+function Menu.DrawBacaneriasInfoPanel()
+    Menu.UpdateHoveredBacaneriasInfo()
+    local info = Menu.BacaneriasInfo
+    local alpha = Menu.BacaneriasInfoAlpha or 0
+    if not info or alpha <= 0.01 then return end
+
+    local p = Menu.GetScaledPosition()
+    local scale = Menu.Scale or 1.0
+    local x = p.x + p.width + 12 * scale
+    local mainBannerH = (Menu.Banner and Menu.Banner.enabled and Menu.Banner.height or Menu.Position.headerHeight) * scale
+    local y = p.y + mainBannerH + 8 * scale
+    local w = 310 * scale
+    local bannerH = 62 * scale
+    local bodyH = 190 * scale
+    local totalH = bannerH + bodyH
+
+    local acR = Menu.Colors.Accent.r / 255.0
+    local acG = Menu.Colors.Accent.g / 255.0
+    local acB = Menu.Colors.Accent.b / 255.0
+    local cardAlpha = math.min(225, (Menu.Colors.BgMain.a or 77) + 125) * alpha
+
+    Menu.DrawRoundedRect(x + 4 * scale, y + 5 * scale, w, totalH, 0, 0, 0, 62 * alpha, 9 * scale)
+    Menu.DrawRoundedRect(x, y, w, totalH, 0, 0, 0, cardAlpha, 8 * scale)
+    Menu.DrawRect(x + 10 * scale, y, 58 * scale, 2 * scale, acR, acG, acB, 235 * alpha)
+
+    if Menu.BacaneriasInfoBanner and Menu.BacaneriasInfoBanner.enabled and Menu.bacaneriasInfoBannerTexture and Menu.bacaneriasInfoBannerTexture > 0 and Susano.DrawImage then
+        Susano.DrawImage(Menu.bacaneriasInfoBannerTexture, x + 1 * scale, y + 1 * scale, w - 2 * scale, bannerH, 1, 1, 1, 0.92 * alpha * (Menu.RenderAlpha or 1.0), 0)
+        for i = 0, 7 do
+            Menu.DrawRect(x + 1 * scale, y + bannerH - 16 * scale + i * 2 * scale, w - 2 * scale, 3 * scale, 0, 0, 0, (22 + i * 18) * alpha)
+        end
+    else
+        local fallback = "SPAWN BACANERIAS"
+        local fw = Susano.GetTextWidth and Susano.GetTextWidth(fallback, 18) or (#fallback * 9)
+        _DrawTextShadow(x + w / 2 - fw / 2, y + 21 * scale, fallback, 18, acR, acG, acB, alpha)
+    end
+
+    local bodyY = y + bannerH
+    Menu.DrawPanelSnow(Menu.BacaneriasInfoParticles, x + 5 * scale, bodyY + 2 * scale, w - 10 * scale, bodyH - 5 * scale, alpha * 0.48, 0.68)
+
+    local left = x + 12 * scale
+    local innerW = w - 24 * scale
+    Menu.DrawRoundedRect(left, bodyY + 10 * scale, 3 * scale, 25 * scale, acR, acG, acB, 225 * alpha, 2 * scale)
+    _DrawTextShadow(left + 10 * scale, bodyY + 9 * scale, _CompactText(info.title, 31), 17, 1, 1, 1, alpha)
+
+    local badge = tostring(info.kind or "PROP")
+    local badgeW = Susano.GetTextWidth and Susano.GetTextWidth(badge, 9) or (#badge * 5)
+    local badgeX = x + w - badgeW - 21 * scale
+    Menu.DrawRoundedRect(badgeX - 7 * scale, bodyY + 13 * scale, badgeW + 14 * scale, 16 * scale, acR, acG, acB, 32 * alpha, 8 * scale)
+    Menu.DrawText(badgeX, bodyY + 15 * scale, badge, 9, acR, acG, acB, 235 * alpha)
+
+    Menu.DrawRect(left + 10 * scale, bodyY + 40 * scale, 78 * scale, 1, acR, acG, acB, 90 * alpha)
+    local lines = _WrapPanelText(info.description, 46, 4)
+    for i, line in ipairs(lines) do
+        Menu.DrawText(left + 2 * scale, bodyY + (48 + (i - 1) * 15) * scale, line, 11, Menu.Colors.TextDim.r / 255.0, Menu.Colors.TextDim.g / 255.0, Menu.Colors.TextDim.b / 255.0, 235 * alpha)
+    end
+
+    local cardsY = bodyY + 112 * scale
+    local gap = 6 * scale
+    local cardW = (innerW - gap) / 2
+    _DrawCompactStatCard(left, cardsY, cardW, 36 * scale, info.kind == "PRESET" and "Contenido" or "Modelo", info.model, 1, 1, 1, alpha)
+    _DrawCompactStatCard(left + cardW + gap, cardsY, cardW, 36 * scale, info.kind == "PRESET" and "Tipo" or "Alternativo", info.fallback, 1, 1, 1, alpha)
+
+    Menu.DrawRoundedRect(left, bodyY + 155 * scale, innerW, 25 * scale, 255, 255, 255, 8 * alpha, 5 * scale)
+    Menu.DrawRect(left + 8 * scale, bodyY + 160 * scale, 18 * scale, 1, acR, acG, acB, 175 * alpha)
+    Menu.DrawText(left + 8 * scale, bodyY + 166 * scale, _CompactText(info.details, 49), 10, Menu.Colors.TextDim.r / 255.0, Menu.Colors.TextDim.g / 255.0, Menu.Colors.TextDim.b / 255.0, 225 * alpha)
+end
+
 function Menu.DrawLoadedNotice()
     if not Menu.LoadedNoticeActive or not Menu.LoadedNoticeStartTime then return end
 
@@ -2089,6 +2324,7 @@ function Menu.Render()
 
         Menu.DrawFooter()
         Menu.DrawPlayerInfoPanel()
+        Menu.DrawBacaneriasInfoPanel()
         Menu.DrawAnticheatPanel()
         Menu.RenderAlpha = 1.0
         Menu.Position.y = originalY
@@ -2190,6 +2426,9 @@ end)
 if Menu.Banner.enabled and Menu.Banner.imageUrl then Menu.LoadBannerTexture(Menu.Banner.imageUrl) end
 if Menu.PlayerInfoBanner and Menu.PlayerInfoBanner.enabled and Menu.PlayerInfoBanner.imageUrl then
     Menu.LoadPlayerInfoBannerTexture(Menu.PlayerInfoBanner.imageUrl)
+end
+if Menu.BacaneriasInfoBanner and Menu.BacaneriasInfoBanner.enabled and Menu.BacaneriasInfoBanner.imageUrl then
+    Menu.LoadBacaneriasInfoBannerTexture(Menu.BacaneriasInfoBanner.imageUrl)
 end
 if Menu.KeySelectorBanner and Menu.KeySelectorBanner.enabled and Menu.KeySelectorBanner.imageUrl then
     Menu.LoadKeySelectorBannerTexture(Menu.KeySelectorBanner.imageUrl)
