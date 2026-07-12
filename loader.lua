@@ -307,68 +307,79 @@ _G.SentexBacanerias.PropDefs = _G.SentexBacanerias.PropDefs or {
     palmera = { label = "Palmera", model = "prop_palm_fan_03_b", fallback = "prop_palm_sm_01a", placeOnGround = true },
     cactus = { label = "Cactus", model = "prop_cactus_01a", fallback = "prop_cactus_02", placeOnGround = true },
     arbusto = { label = "Arbusto", model = "prop_bush_lrg_01", fallback = "prop_bush_med_03", placeOnGround = true },
+}
+
+-- Props adicionales grandes / enormes añadidos fuera de la tabla principal
 
     -- Construcciones grandes / enormes
-    mega_bloque_01 = { label = "Mega bloque 01", model = "stt_prop_stunt_bblock_huge_01", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
-    mega_bloque_02 = { label = "Mega bloque 02", model = "stt_prop_stunt_bblock_huge_02", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
-    mega_bloque_03 = { label = "Mega bloque 03", model = "stt_prop_stunt_bblock_huge_03", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
-    mega_bloque_04 = { label = "Mega bloque 04", model = "stt_prop_stunt_bblock_huge_04", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
-    mega_bloque_05 = { label = "Mega bloque 05", model = "stt_prop_stunt_bblock_huge_05", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
-    mega_rampa_curva = { label = "Mega rampa curva", model = "stt_prop_stunt_track_bumps", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
-    mega_rampa_salto = { label = "Mega rampa de salto", model = "stt_prop_ramp_jump_xl", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
-    mega_tubo = { label = "Mega tubo", model = "stt_prop_stunt_tube_l", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
-    mega_tubo_cruce = { label = "Mega tubo cruce", model = "stt_prop_stunt_tube_crn", fallback = "stt_prop_stunt_tube_l", placeOnGround = true, alignToPlayer = true },
-    mega_anillo = { label = "Mega anillo", model = "stt_prop_stunt_loop_s", fallback = "stt_prop_stunt_tube_l", placeOnGround = true, alignToPlayer = true },
-    mega_molino = { label = "Molino enorme", model = "prop_windmill_01", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
-    mega_grua = { label = "Grua enorme", model = "prop_crane_01_truck1", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true },
-    mega_avion = { label = "Avion enorme decorativo", model = "prop_air_bigradar", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
-    mega_radar = { label = "Radar enorme", model = "prop_air_bigradar", fallback = "prop_windmill_01", placeOnGround = true, alignToPlayer = true },
-    mega_yate = { label = "Yate enorme", model = "prop_yacht_lounger", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true },
-    mega_roca = { label = "Roca colosal", model = "prop_rock_4_big2", fallback = "prop_rock_4_big", zOffset = 2.0, placeOnGround = true },
-    mega_asteroide = { label = "Asteroide colosal", model = "prop_asteroid_01", fallback = "prop_rock_4_big2", zOffset = 4.0, placeOnGround = false },
-    mega_asteroide_alto = { label = "Asteroide colosal flotante", model = "prop_asteroid_01", fallback = "prop_rock_4_big2", zOffset = 25.0, placeOnGround = false },
+_G.SentexBacanerias.PropDefs.mega_bloque_01 = { label = "Mega bloque 01", model = "stt_prop_stunt_bblock_huge_01", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_bloque_02 = { label = "Mega bloque 02", model = "stt_prop_stunt_bblock_huge_02", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_bloque_03 = { label = "Mega bloque 03", model = "stt_prop_stunt_bblock_huge_03", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_bloque_04 = { label = "Mega bloque 04", model = "stt_prop_stunt_bblock_huge_04", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_bloque_05 = { label = "Mega bloque 05", model = "stt_prop_stunt_bblock_huge_05", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_rampa_curva = { label = "Mega rampa curva", model = "stt_prop_stunt_track_bumps", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_rampa_salto = { label = "Mega rampa de salto", model = "stt_prop_ramp_jump_xl", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_tubo = { label = "Mega tubo", model = "stt_prop_stunt_tube_l", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_tubo_cruce = { label = "Mega tubo cruce", model = "stt_prop_stunt_tube_crn", fallback = "stt_prop_stunt_tube_l", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_anillo = { label = "Mega anillo", model = "stt_prop_stunt_loop_s", fallback = "stt_prop_stunt_tube_l", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_molino = { label = "Molino enorme", model = "prop_windmill_01", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_grua = { label = "Grua enorme", model = "prop_crane_01_truck1", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_avion = { label = "Avion enorme decorativo", model = "prop_air_bigradar", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_radar = { label = "Radar enorme", model = "prop_air_bigradar", fallback = "prop_windmill_01", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_yate = { label = "Yate enorme", model = "prop_yacht_lounger", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.mega_roca = { label = "Roca colosal", model = "prop_rock_4_big2", fallback = "prop_rock_4_big", zOffset = 2.0, placeOnGround = true }
+_G.SentexBacanerias.PropDefs.mega_asteroide = { label = "Asteroide colosal", model = "prop_asteroid_01", fallback = "prop_rock_4_big2", zOffset = 4.0, placeOnGround = false }
+_G.SentexBacanerias.PropDefs.mega_asteroide_alto = { label = "Asteroide colosal flotante", model = "prop_asteroid_01", fallback = "prop_rock_4_big2", zOffset = 25.0, placeOnGround = false }
+
+_G.SentexBacanerias.PropDefs.bandera_espana = {
+    label = "Bandera de Espana",
+    model = "prop_flag_spain",
+    fallback = "prop_flag_eu",
+    placeOnGround = false,
+    alignToPlayer = true,
+    description = "Bandera espanola utilizada para construir el preset gigante."
+}
 
     -- Mas rampas / parkour
-    rampa_larga = { label = "Rampa larga", model = "stt_prop_ramp_spiral_l", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
-    rampa_xl = { label = "Rampa XL", model = "stt_prop_ramp_jump_xl", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
-    rampa_curva = { label = "Rampa curva", model = "stt_prop_stunt_track_bumps", fallback = "prop_mp_ramp_02", placeOnGround = true, alignToPlayer = true },
-    tubo_recto = { label = "Tubo recto", model = "stt_prop_stunt_tube_l", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
-    tubo_curva = { label = "Tubo curva", model = "stt_prop_stunt_tube_crn", fallback = "stt_prop_stunt_tube_l", placeOnGround = true, alignToPlayer = true },
-    anillo_stunt = { label = "Anillo stunt", model = "stt_prop_stunt_loop_s", fallback = "stt_prop_stunt_tube_l", placeOnGround = true, alignToPlayer = true },
-    bloque_stunt = { label = "Bloque stunt", model = "stt_prop_stunt_bblock_mdm1", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true },
-    muro_alto = { label = "Muro alto", model = "prop_fnclink_03gate5", fallback = "prop_container_05a", zOffset = 2.0, placeOnGround = true, alignToPlayer = true },
+_G.SentexBacanerias.PropDefs.rampa_larga = { label = "Rampa larga", model = "stt_prop_ramp_spiral_l", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.rampa_xl = { label = "Rampa XL", model = "stt_prop_ramp_jump_xl", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.rampa_curva = { label = "Rampa curva", model = "stt_prop_stunt_track_bumps", fallback = "prop_mp_ramp_02", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.tubo_recto = { label = "Tubo recto", model = "stt_prop_stunt_tube_l", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.tubo_curva = { label = "Tubo curva", model = "stt_prop_stunt_tube_crn", fallback = "stt_prop_stunt_tube_l", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.anillo_stunt = { label = "Anillo stunt", model = "stt_prop_stunt_loop_s", fallback = "stt_prop_stunt_tube_l", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.bloque_stunt = { label = "Bloque stunt", model = "stt_prop_stunt_bblock_mdm1", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.muro_alto = { label = "Muro alto", model = "prop_fnclink_03gate5", fallback = "prop_container_05a", zOffset = 2.0, placeOnGround = true, alignToPlayer = true }
 
     -- Mas ciudad / industria
-    camion_contenedor = { label = "Contenedor industrial", model = "prop_container_05a", fallback = "prop_container_01a", placeOnGround = true, alignToPlayer = true },
-    deposito = { label = "Deposito industrial", model = "prop_gas_tank_01a", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true },
-    generador = { label = "Generador", model = "prop_generator_03b", fallback = "prop_generator_01a", placeOnGround = true, alignToPlayer = true },
-    caseta = { label = "Caseta de obra", model = "prop_portacabin01", fallback = "prop_container_01a", placeOnGround = true, alignToPlayer = true },
-    andamio = { label = "Andamio", model = "prop_scafold_01a", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true },
-    farola = { label = "Farola", model = "prop_streetlight_01", fallback = "prop_sign_road_01a", placeOnGround = true, alignToPlayer = true },
-    cabina = { label = "Cabina telefonica", model = "prop_phonebox_01a", fallback = "prop_dumpster_01a", placeOnGround = true, alignToPlayer = true },
-    hidrante = { label = "Hidrante", model = "prop_fire_hydrant_2", fallback = "prop_barrel_02a", placeOnGround = true },
+_G.SentexBacanerias.PropDefs.camion_contenedor = { label = "Contenedor industrial", model = "prop_container_05a", fallback = "prop_container_01a", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.deposito = { label = "Deposito industrial", model = "prop_gas_tank_01a", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.generador = { label = "Generador", model = "prop_generator_03b", fallback = "prop_generator_01a", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.caseta = { label = "Caseta de obra", model = "prop_portacabin01", fallback = "prop_container_01a", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.andamio = { label = "Andamio", model = "prop_scafold_01a", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.farola = { label = "Farola", model = "prop_streetlight_01", fallback = "prop_sign_road_01a", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.cabina = { label = "Cabina telefonica", model = "prop_phonebox_01a", fallback = "prop_dumpster_01a", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.hidrante = { label = "Hidrante", model = "prop_fire_hydrant_2", fallback = "prop_barrel_02a", placeOnGround = true }
 
     -- Mas decoracion
-    estatua = { label = "Estatua", model = "prop_statue_01", fallback = "prop_rock_4_big2", placeOnGround = true, alignToPlayer = true },
-    fuente = { label = "Fuente", model = "prop_fountain1", fallback = "prop_table_03b", placeOnGround = true, alignToPlayer = true },
-    escenario = { label = "Escenario", model = "prop_stage_01", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true },
-    foco = { label = "Foco de escenario", model = "prop_spot_01", fallback = "prop_streetlight_01", placeOnGround = true, alignToPlayer = true },
-    sofa = { label = "Sofa", model = "prop_couch_01", fallback = "prop_bench_01a", placeOnGround = true, alignToPlayer = true },
-    cama = { label = "Cama", model = "prop_bed_01", fallback = "prop_table_03b", placeOnGround = true, alignToPlayer = true },
-    nevera = { label = "Nevera", model = "prop_fridge_01", fallback = "prop_boxpile_07d", placeOnGround = true, alignToPlayer = true },
-    maquina_refrescos = { label = "Maquina refrescos", model = "prop_vend_soda_01", fallback = "prop_boxpile_07d", placeOnGround = true, alignToPlayer = true },
+_G.SentexBacanerias.PropDefs.estatua = { label = "Estatua", model = "prop_statue_01", fallback = "prop_rock_4_big2", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.fuente = { label = "Fuente", model = "prop_fountain1", fallback = "prop_table_03b", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.escenario = { label = "Escenario", model = "prop_stage_01", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.foco = { label = "Foco de escenario", model = "prop_spot_01", fallback = "prop_streetlight_01", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.sofa = { label = "Sofa", model = "prop_couch_01", fallback = "prop_bench_01a", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.cama = { label = "Cama", model = "prop_bed_01", fallback = "prop_table_03b", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.nevera = { label = "Nevera", model = "prop_fridge_01", fallback = "prop_boxpile_07d", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.maquina_refrescos = { label = "Maquina refrescos", model = "prop_vend_soda_01", fallback = "prop_boxpile_07d", placeOnGround = true, alignToPlayer = true }
 
     -- Mas naturaleza
-    arbol_grande = { label = "Arbol grande", model = "prop_tree_eng_oak_01", fallback = "prop_tree_pine_01", placeOnGround = true },
-    arbol_seco = { label = "Arbol seco", model = "prop_tree_jacada_02", fallback = "prop_tree_pine_01", placeOnGround = true },
-    palmera_grande = { label = "Palmera grande", model = "prop_palm_huge_01a", fallback = "prop_palm_fan_03_b", placeOnGround = true },
-    cactus_grande = { label = "Cactus grande", model = "prop_cactus_03", fallback = "prop_cactus_01a", placeOnGround = true },
-    roca_desierto = { label = "Roca desierto", model = "prop_rock_5_smash3", fallback = "prop_rock_4_c", placeOnGround = true },
-    tronco = { label = "Tronco", model = "prop_log_01", fallback = "prop_rock_4_c", placeOnGround = true, alignToPlayer = true },
-    seto = { label = "Seto", model = "prop_hedge_trimmer_01", fallback = "prop_bush_lrg_01", placeOnGround = true },
-    jardinera = { label = "Jardinera", model = "prop_plant_int_03a", fallback = "prop_bush_med_03", placeOnGround = true }
+_G.SentexBacanerias.PropDefs.arbol_grande = { label = "Arbol grande", model = "prop_tree_eng_oak_01", fallback = "prop_tree_pine_01", placeOnGround = true }
+_G.SentexBacanerias.PropDefs.arbol_seco = { label = "Arbol seco", model = "prop_tree_jacada_02", fallback = "prop_tree_pine_01", placeOnGround = true }
+_G.SentexBacanerias.PropDefs.palmera_grande = { label = "Palmera grande", model = "prop_palm_huge_01a", fallback = "prop_palm_fan_03_b", placeOnGround = true }
+_G.SentexBacanerias.PropDefs.cactus_grande = { label = "Cactus grande", model = "prop_cactus_03", fallback = "prop_cactus_01a", placeOnGround = true }
+_G.SentexBacanerias.PropDefs.roca_desierto = { label = "Roca desierto", model = "prop_rock_5_smash3", fallback = "prop_rock_4_c", placeOnGround = true }
+_G.SentexBacanerias.PropDefs.tronco = { label = "Tronco", model = "prop_log_01", fallback = "prop_rock_4_c", placeOnGround = true, alignToPlayer = true }
+_G.SentexBacanerias.PropDefs.seto = { label = "Seto", model = "prop_hedge_trimmer_01", fallback = "prop_bush_lrg_01", placeOnGround = true }
+_G.SentexBacanerias.PropDefs.jardinera = { label = "Jardinera", model = "prop_plant_int_03a", fallback = "prop_bush_med_03", placeOnGround = true }
 
-}
 
 _G.SentexBacanerias.Presets = _G.SentexBacanerias.Presets or {
     circuito_conos = {
@@ -537,6 +548,41 @@ _G.SentexBacanerias.Presets = _G.SentexBacanerias.Presets or {
             { key = "foco", x = -12, y = 6 }, { key = "foco", x = 12, y = 6 },
             { key = "barrera", x = -10, y = 16 }, { key = "barrera", x = 0, y = 16 }, { key = "barrera", x = 10, y = 16 },
             { key = "mega_anillo", x = 0, y = 28, z = 8 }
+        }
+    },
+    bandera_espana_enorme = {
+        label = "Bandera de Espana ENORME",
+        description = "Gran mural formado por 24 banderas espanolas, distribuido en varias filas y elevado sobre el terreno.",
+        items = {
+            { key = "bandera_espana", x = -21, y = 0, z = 3, heading = 0 },
+            { key = "bandera_espana", x = -15, y = 0, z = 3, heading = 0 },
+            { key = "bandera_espana", x = -9,  y = 0, z = 3, heading = 0 },
+            { key = "bandera_espana", x = -3,  y = 0, z = 3, heading = 0 },
+            { key = "bandera_espana", x = 3,   y = 0, z = 3, heading = 0 },
+            { key = "bandera_espana", x = 9,   y = 0, z = 3, heading = 0 },
+            { key = "bandera_espana", x = 15,  y = 0, z = 3, heading = 0 },
+            { key = "bandera_espana", x = 21,  y = 0, z = 3, heading = 0 },
+
+            { key = "bandera_espana", x = -21, y = 0, z = 9, heading = 0 },
+            { key = "bandera_espana", x = -15, y = 0, z = 9, heading = 0 },
+            { key = "bandera_espana", x = -9,  y = 0, z = 9, heading = 0 },
+            { key = "bandera_espana", x = -3,  y = 0, z = 9, heading = 0 },
+            { key = "bandera_espana", x = 3,   y = 0, z = 9, heading = 0 },
+            { key = "bandera_espana", x = 9,   y = 0, z = 9, heading = 0 },
+            { key = "bandera_espana", x = 15,  y = 0, z = 9, heading = 0 },
+            { key = "bandera_espana", x = 21,  y = 0, z = 9, heading = 0 },
+
+            { key = "bandera_espana", x = -21, y = 0, z = 15, heading = 0 },
+            { key = "bandera_espana", x = -15, y = 0, z = 15, heading = 0 },
+            { key = "bandera_espana", x = -9,  y = 0, z = 15, heading = 0 },
+            { key = "bandera_espana", x = -3,  y = 0, z = 15, heading = 0 },
+            { key = "bandera_espana", x = 3,   y = 0, z = 15, heading = 0 },
+            { key = "bandera_espana", x = 9,   y = 0, z = 15, heading = 0 },
+            { key = "bandera_espana", x = 15,  y = 0, z = 15, heading = 0 },
+            { key = "bandera_espana", x = 21,  y = 0, z = 15, heading = 0 },
+
+            { key = "mega_bloque_04", x = -28, y = 1, z = 7, heading = 90 },
+            { key = "mega_bloque_04", x = 28,  y = 1, z = 7, heading = 90 }
         }
     },
     muralla_enorme = {
@@ -2199,6 +2245,7 @@ Menu.Categories = {
             { name = "Roca colosal", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_roca") end },
             { name = "Asteroide colosal", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_asteroide") end },
             { name = "Asteroide colosal flotante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_asteroide_alto") end },
+            { name = "Bandera de Espana ENORME", type = "action", description = "Preset gigante de banderas espanolas", onClick = function() _G.SentexBacanerias.SpawnPreset("bandera_espana_enorme") end },
             { name = "Plataforma enorme", type = "action", onClick = function() _G.SentexBacanerias.Spawn("plataforma_alta") end },
             { name = "Contenedor enorme", type = "action", onClick = function() _G.SentexBacanerias.Spawn("plataforma_metal") end }
         }},
@@ -2218,7 +2265,8 @@ Menu.Categories = {
             { name = "Ciudad industrial", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("ciudad_industrial") end },
             { name = "Bosque gigante", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("bosque_gigante") end },
             { name = "Escenario festival", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("escenario_festival") end },
-            { name = "Muralla enorme", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("muralla_enorme") end }
+            { name = "Muralla enorme", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("muralla_enorme") end },
+            { name = "Bandera de Espana ENORME", type = "action", description = "Mural gigante compuesto por 24 banderas", onClick = function() _G.SentexBacanerias.SpawnPreset("bandera_espana_enorme") end }
         }},
         { name = "Gestion", items = {
             { name = "Distancia spawn", type = "slider", value = 45, min = 10, max = 200, step = 5, onClick = function(value) _G.SentexBacanerias.SetDistance(value) end },
