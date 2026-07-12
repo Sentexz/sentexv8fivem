@@ -258,7 +258,7 @@ end
 -- Sin variables locales en el chunk principal: evita el error "too many local variables".
 _G.SentexBacanerias = _G.SentexBacanerias or {}
 _G.SentexBacanerias.SpawnedProps = _G.SentexBacanerias.SpawnedProps or {}
-_G.SentexBacanerias.MaxProps = _G.SentexBacanerias.MaxProps or 60
+_G.SentexBacanerias.MaxProps = nil
 _G.SentexBacanerias.SpawnDistance = _G.SentexBacanerias.SpawnDistance or 45.0
 _G.SentexBacanerias.FreezeProps = _G.SentexBacanerias.FreezeProps ~= false
 _G.SentexBacanerias.NetworkedProps = _G.SentexBacanerias.NetworkedProps == true -- Local por defecto.
@@ -495,7 +495,7 @@ function _G.SentexBacanerias.Spawn(propKey)
         return
     end
 
-    if #B.SpawnedProps >= B.MaxProps then
+    if B.MaxProps and #B.SpawnedProps >= B.MaxProps then
         B.Notify("~y~Limite de props alcanzado. Usa 'Limpiar bacanerias'.")
         return
     end
@@ -546,7 +546,7 @@ function _G.SentexBacanerias.CreatePropFromDef(def, coords, heading)
     if not def or not coords then return nil end
 
     B.CleanupList()
-    if #B.SpawnedProps >= B.MaxProps then
+    if B.MaxProps and #B.SpawnedProps >= B.MaxProps then
         B.Notify("~y~Limite de props alcanzado. Usa 'Limpiar bacanerias'.")
         return nil
     end
@@ -600,7 +600,7 @@ function _G.SentexBacanerias.SpawnPreset(presetKey)
     end
 
     B.CleanupList()
-    if (#B.SpawnedProps + #preset.items) > B.MaxProps then
+    if B.MaxProps and (#B.SpawnedProps + #preset.items) > B.MaxProps then
         B.Notify("~y~No hay espacio para ese preset. Limpia bacanerias o sube el limite en el codigo.")
         return
     end
