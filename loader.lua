@@ -307,6 +307,67 @@ _G.SentexBacanerias.PropDefs = _G.SentexBacanerias.PropDefs or {
     palmera = { label = "Palmera", model = "prop_palm_fan_03_b", fallback = "prop_palm_sm_01a", placeOnGround = true },
     cactus = { label = "Cactus", model = "prop_cactus_01a", fallback = "prop_cactus_02", placeOnGround = true },
     arbusto = { label = "Arbusto", model = "prop_bush_lrg_01", fallback = "prop_bush_med_03", placeOnGround = true }
+
+    -- Construcciones grandes / enormes
+    mega_bloque_01 = { label = "Mega bloque 01", model = "stt_prop_stunt_bblock_huge_01", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
+    mega_bloque_02 = { label = "Mega bloque 02", model = "stt_prop_stunt_bblock_huge_02", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
+    mega_bloque_03 = { label = "Mega bloque 03", model = "stt_prop_stunt_bblock_huge_03", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
+    mega_bloque_04 = { label = "Mega bloque 04", model = "stt_prop_stunt_bblock_huge_04", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
+    mega_bloque_05 = { label = "Mega bloque 05", model = "stt_prop_stunt_bblock_huge_05", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
+    mega_rampa_curva = { label = "Mega rampa curva", model = "stt_prop_stunt_track_bumps", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
+    mega_rampa_salto = { label = "Mega rampa de salto", model = "stt_prop_ramp_jump_xl", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
+    mega_tubo = { label = "Mega tubo", model = "stt_prop_stunt_tube_l", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
+    mega_tubo_cruce = { label = "Mega tubo cruce", model = "stt_prop_stunt_tube_crn", fallback = "stt_prop_stunt_tube_l", placeOnGround = true, alignToPlayer = true },
+    mega_anillo = { label = "Mega anillo", model = "stt_prop_stunt_loop_s", fallback = "stt_prop_stunt_tube_l", placeOnGround = true, alignToPlayer = true },
+    mega_molino = { label = "Molino enorme", model = "prop_windmill_01", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
+    mega_grua = { label = "Grua enorme", model = "prop_crane_01_truck1", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true },
+    mega_avion = { label = "Avion enorme decorativo", model = "prop_air_bigradar", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
+    mega_radar = { label = "Radar enorme", model = "prop_air_bigradar", fallback = "prop_windmill_01", placeOnGround = true, alignToPlayer = true },
+    mega_yate = { label = "Yate enorme", model = "prop_yacht_lounger", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true },
+    mega_roca = { label = "Roca colosal", model = "prop_rock_4_big2", fallback = "prop_rock_4_big", zOffset = 2.0, placeOnGround = true },
+    mega_asteroide = { label = "Asteroide colosal", model = "prop_asteroid_01", fallback = "prop_rock_4_big2", zOffset = 4.0, placeOnGround = false },
+    mega_asteroide_alto = { label = "Asteroide colosal flotante", model = "prop_asteroid_01", fallback = "prop_rock_4_big2", zOffset = 25.0, placeOnGround = false },
+
+    -- Mas rampas / parkour
+    rampa_larga = { label = "Rampa larga", model = "stt_prop_ramp_spiral_l", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
+    rampa_xl = { label = "Rampa XL", model = "stt_prop_ramp_jump_xl", fallback = "stt_prop_stunt_bblock_huge_04", placeOnGround = true, alignToPlayer = true },
+    rampa_curva = { label = "Rampa curva", model = "stt_prop_stunt_track_bumps", fallback = "prop_mp_ramp_02", placeOnGround = true, alignToPlayer = true },
+    tubo_recto = { label = "Tubo recto", model = "stt_prop_stunt_tube_l", fallback = "prop_mp_ramp_03", placeOnGround = true, alignToPlayer = true },
+    tubo_curva = { label = "Tubo curva", model = "stt_prop_stunt_tube_crn", fallback = "stt_prop_stunt_tube_l", placeOnGround = true, alignToPlayer = true },
+    anillo_stunt = { label = "Anillo stunt", model = "stt_prop_stunt_loop_s", fallback = "stt_prop_stunt_tube_l", placeOnGround = true, alignToPlayer = true },
+    bloque_stunt = { label = "Bloque stunt", model = "stt_prop_stunt_bblock_mdm1", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true },
+    muro_alto = { label = "Muro alto", model = "prop_fnclink_03gate5", fallback = "prop_container_05a", zOffset = 2.0, placeOnGround = true, alignToPlayer = true },
+
+    -- Mas ciudad / industria
+    camion_contenedor = { label = "Contenedor industrial", model = "prop_container_05a", fallback = "prop_container_01a", placeOnGround = true, alignToPlayer = true },
+    deposito = { label = "Deposito industrial", model = "prop_gas_tank_01a", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true },
+    generador = { label = "Generador", model = "prop_generator_03b", fallback = "prop_generator_01a", placeOnGround = true, alignToPlayer = true },
+    caseta = { label = "Caseta de obra", model = "prop_portacabin01", fallback = "prop_container_01a", placeOnGround = true, alignToPlayer = true },
+    andamio = { label = "Andamio", model = "prop_scafold_01a", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true },
+    farola = { label = "Farola", model = "prop_streetlight_01", fallback = "prop_sign_road_01a", placeOnGround = true, alignToPlayer = true },
+    cabina = { label = "Cabina telefonica", model = "prop_phonebox_01a", fallback = "prop_dumpster_01a", placeOnGround = true, alignToPlayer = true },
+    hidrante = { label = "Hidrante", model = "prop_fire_hydrant_2", fallback = "prop_barrel_02a", placeOnGround = true },
+
+    -- Mas decoracion
+    estatua = { label = "Estatua", model = "prop_statue_01", fallback = "prop_rock_4_big2", placeOnGround = true, alignToPlayer = true },
+    fuente = { label = "Fuente", model = "prop_fountain1", fallback = "prop_table_03b", placeOnGround = true, alignToPlayer = true },
+    escenario = { label = "Escenario", model = "prop_stage_01", fallback = "prop_container_05a", placeOnGround = true, alignToPlayer = true },
+    foco = { label = "Foco de escenario", model = "prop_spot_01", fallback = "prop_streetlight_01", placeOnGround = true, alignToPlayer = true },
+    sofa = { label = "Sofa", model = "prop_couch_01", fallback = "prop_bench_01a", placeOnGround = true, alignToPlayer = true },
+    cama = { label = "Cama", model = "prop_bed_01", fallback = "prop_table_03b", placeOnGround = true, alignToPlayer = true },
+    nevera = { label = "Nevera", model = "prop_fridge_01", fallback = "prop_boxpile_07d", placeOnGround = true, alignToPlayer = true },
+    maquina_refrescos = { label = "Maquina refrescos", model = "prop_vend_soda_01", fallback = "prop_boxpile_07d", placeOnGround = true, alignToPlayer = true },
+
+    -- Mas naturaleza
+    arbol_grande = { label = "Arbol grande", model = "prop_tree_eng_oak_01", fallback = "prop_tree_pine_01", placeOnGround = true },
+    arbol_seco = { label = "Arbol seco", model = "prop_tree_jacada_02", fallback = "prop_tree_pine_01", placeOnGround = true },
+    palmera_grande = { label = "Palmera grande", model = "prop_palm_huge_01a", fallback = "prop_palm_fan_03_b", placeOnGround = true },
+    cactus_grande = { label = "Cactus grande", model = "prop_cactus_03", fallback = "prop_cactus_01a", placeOnGround = true },
+    roca_desierto = { label = "Roca desierto", model = "prop_rock_5_smash3", fallback = "prop_rock_4_c", placeOnGround = true },
+    tronco = { label = "Tronco", model = "prop_log_01", fallback = "prop_rock_4_c", placeOnGround = true, alignToPlayer = true },
+    seto = { label = "Seto", model = "prop_hedge_trimmer_01", fallback = "prop_bush_lrg_01", placeOnGround = true },
+    jardinera = { label = "Jardinera", model = "prop_plant_int_03a", fallback = "prop_bush_med_03", placeOnGround = true }
+
 }
 
 _G.SentexBacanerias.Presets = _G.SentexBacanerias.Presets or {
@@ -375,6 +436,119 @@ _G.SentexBacanerias.Presets = _G.SentexBacanerias.Presets or {
             { key = "sombrilla", x = 0, y = 9 }
         }
     }
+,
+    fortaleza_colosal = {
+        label = "Fortaleza colosal",
+        items = {
+            { key = "mega_bloque_04", x = 0, y = 0 },
+            { key = "mega_bloque_01", x = -24, y = 0 },
+            { key = "mega_bloque_02", x = 24, y = 0 },
+            { key = "mega_bloque_03", x = 0, y = 24 },
+            { key = "mega_bloque_05", x = 0, y = -24 },
+            { key = "mega_rampa_salto", x = 0, y = -48, heading = 0 },
+            { key = "mega_molino", x = -38, y = 30 },
+            { key = "mega_molino", x = 38, y = 30 }
+        }
+    },
+    megapuente = {
+        label = "Megapuente",
+        items = {
+            { key = "mega_bloque_01", x = 0, y = 0 },
+            { key = "mega_bloque_01", x = 0, y = 22 },
+            { key = "mega_bloque_01", x = 0, y = 44 },
+            { key = "mega_bloque_01", x = 0, y = 66 },
+            { key = "mega_bloque_01", x = 0, y = 88 },
+            { key = "mega_rampa_salto", x = 0, y = -28, heading = 0 },
+            { key = "mega_rampa_salto", x = 0, y = 116, heading = 180 }
+        }
+    },
+    torre_colosal = {
+        label = "Torre colosal",
+        items = {
+            { key = "mega_bloque_04", x = 0, y = 0, z = 0 },
+            { key = "mega_bloque_04", x = 0, y = 0, z = 16 },
+            { key = "mega_bloque_04", x = 0, y = 0, z = 32 },
+            { key = "mega_bloque_04", x = 0, y = 0, z = 48 },
+            { key = "mega_bloque_04", x = 0, y = 0, z = 64 },
+            { key = "mega_asteroide_alto", x = 0, y = 0, z = 62 }
+        }
+    },
+    arena_gigante = {
+        label = "Arena gigante",
+        items = {
+            { key = "mega_bloque_01", x = -35, y = 0, heading = 90 },
+            { key = "mega_bloque_01", x = 35, y = 0, heading = 90 },
+            { key = "mega_bloque_02", x = 0, y = -35 },
+            { key = "mega_bloque_02", x = 0, y = 35 },
+            { key = "mega_rampa_salto", x = 0, y = -18, heading = 0 },
+            { key = "mega_rampa_salto", x = 0, y = 18, heading = 180 },
+            { key = "mega_anillo", x = 0, y = 0, z = 8 }
+        }
+    },
+    campo_meteoritos_colosal = {
+        label = "Campo meteoritos colosal",
+        items = {
+            { key = "mega_asteroide", x = 0, y = 0, z = 5 },
+            { key = "mega_asteroide_alto", x = 25, y = 15, z = 12 },
+            { key = "mega_asteroide_alto", x = -25, y = 18, z = 20 },
+            { key = "mega_roca", x = 35, y = -20 },
+            { key = "mega_roca", x = -35, y = -22 },
+            { key = "asteroide_grande", x = 15, y = 35, z = 8 },
+            { key = "asteroide_grande", x = -18, y = 38, z = 14 },
+            { key = "asteroide_flotante", x = 0, y = -38, z = 18 }
+        }
+    },
+    circuito_tubos_gigante = {
+        label = "Circuito tubos gigante",
+        items = {
+            { key = "mega_rampa_salto", x = 0, y = 0, heading = 0 },
+            { key = "mega_tubo", x = 0, y = 28, z = 8 },
+            { key = "mega_tubo", x = 0, y = 52, z = 8 },
+            { key = "mega_tubo_cruce", x = 0, y = 76, z = 8 },
+            { key = "mega_anillo", x = 0, y = 100, z = 8 },
+            { key = "mega_rampa_salto", x = 0, y = 128, heading = 180 }
+        }
+    },
+    ciudad_industrial = {
+        label = "Ciudad industrial",
+        items = {
+            { key = "caseta", x = -12, y = 0 }, { key = "caseta", x = 12, y = 0 },
+            { key = "camion_contenedor", x = -15, y = 18 }, { key = "camion_contenedor", x = 15, y = 18 },
+            { key = "deposito", x = -20, y = 38 }, { key = "deposito", x = 20, y = 38 },
+            { key = "andamio", x = 0, y = 28 }, { key = "generador", x = 0, y = 12 },
+            { key = "mega_grua", x = 0, y = 55 }
+        }
+    },
+    bosque_gigante = {
+        label = "Bosque gigante",
+        items = {
+            { key = "arbol_grande", x = 0, y = 0 }, { key = "palmera_grande", x = 12, y = 8 },
+            { key = "arbol_grande", x = -14, y = 12 }, { key = "arbol_seco", x = 22, y = 20 },
+            { key = "arbol_grande", x = -24, y = 25 }, { key = "palmera_grande", x = 5, y = 30 },
+            { key = "mega_roca", x = 0, y = 42 }, { key = "fogata", x = 0, y = 16 }
+        }
+    },
+    escenario_festival = {
+        label = "Escenario festival",
+        items = {
+            { key = "escenario", x = 0, y = 0 },
+            { key = "pantalla", x = 0, y = -3, z = 4 },
+            { key = "altavoz", x = -8, y = 0 }, { key = "altavoz", x = 8, y = 0 },
+            { key = "foco", x = -12, y = 6 }, { key = "foco", x = 12, y = 6 },
+            { key = "barrera", x = -10, y = 16 }, { key = "barrera", x = 0, y = 16 }, { key = "barrera", x = 10, y = 16 },
+            { key = "mega_anillo", x = 0, y = 28, z = 8 }
+        }
+    },
+    muralla_enorme = {
+        label = "Muralla enorme",
+        items = {
+            { key = "mega_bloque_03", x = -44, y = 0 }, { key = "mega_bloque_03", x = -22, y = 0 },
+            { key = "mega_bloque_03", x = 0, y = 0 }, { key = "mega_bloque_03", x = 22, y = 0 },
+            { key = "mega_bloque_03", x = 44, y = 0 },
+            { key = "mega_bloque_04", x = -55, y = 0, z = 15 }, { key = "mega_bloque_04", x = 55, y = 0, z = 15 }
+        }
+    }
+
 }
 function _G.SentexBacanerias.Notify(message)
     if TriggerEvent then
@@ -1930,16 +2104,30 @@ Menu.Categories = {
             { name = "Rampa pequena", type = "action", onClick = function() _G.SentexBacanerias.Spawn("rampa_pequena") end },
             { name = "Rampa media", type = "action", onClick = function() _G.SentexBacanerias.Spawn("rampa_media") end },
             { name = "Rampa gigante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("rampa_gigante") end },
+            { name = "Rampa larga", type = "action", onClick = function() _G.SentexBacanerias.Spawn("rampa_larga") end },
+            { name = "Rampa XL", type = "action", onClick = function() _G.SentexBacanerias.Spawn("rampa_xl") end },
+            { name = "Rampa curva", type = "action", onClick = function() _G.SentexBacanerias.Spawn("rampa_curva") end },
+            { name = "Plataforma", type = "action", onClick = function() _G.SentexBacanerias.Spawn("plataforma") end },
             { name = "Plataforma metal", type = "action", onClick = function() _G.SentexBacanerias.Spawn("plataforma_metal") end },
             { name = "Plataforma alta", type = "action", onClick = function() _G.SentexBacanerias.Spawn("plataforma_alta") end },
-            { name = "Muro bajo", type = "action", onClick = function() _G.SentexBacanerias.Spawn("muro_bajo") end }
+            { name = "Muro bajo", type = "action", onClick = function() _G.SentexBacanerias.Spawn("muro_bajo") end },
+            { name = "Muro alto", type = "action", onClick = function() _G.SentexBacanerias.Spawn("muro_alto") end },
+            { name = "Tubo recto", type = "action", onClick = function() _G.SentexBacanerias.Spawn("tubo_recto") end },
+            { name = "Tubo curva", type = "action", onClick = function() _G.SentexBacanerias.Spawn("tubo_curva") end },
+            { name = "Anillo stunt", type = "action", onClick = function() _G.SentexBacanerias.Spawn("anillo_stunt") end },
+            { name = "Bloque stunt", type = "action", onClick = function() _G.SentexBacanerias.Spawn("bloque_stunt") end }
         }},
         { name = "Asteroides", items = {
             { name = "Asteroide pequeno", type = "action", onClick = function() _G.SentexBacanerias.Spawn("asteroide_pequeno") end },
             { name = "Asteroide grande", type = "action", onClick = function() _G.SentexBacanerias.Spawn("asteroide_grande") end },
             { name = "Asteroide flotante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("asteroide_flotante") end },
+            { name = "Roca media", type = "action", onClick = function() _G.SentexBacanerias.Spawn("roca_media") end },
             { name = "Roca grande", type = "action", onClick = function() _G.SentexBacanerias.Spawn("roca_grande") end },
-            { name = "Roca media", type = "action", onClick = function() _G.SentexBacanerias.Spawn("roca_media") end }
+            { name = "Roca desierto", type = "action", onClick = function() _G.SentexBacanerias.Spawn("roca_desierto") end },
+            { name = "Roca colosal", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_roca") end },
+            { name = "Asteroide colosal", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_asteroide") end },
+            { name = "Asteroide colosal flotante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_asteroide_alto") end },
+            { name = "Tronco", type = "action", onClick = function() _G.SentexBacanerias.Spawn("tronco") end }
         }},
         { name = "Ciudad", items = {
             { name = "Cono", type = "action", onClick = function() _G.SentexBacanerias.Spawn("cono") end },
@@ -1949,7 +2137,17 @@ Menu.Categories = {
             { name = "Barril", type = "action", onClick = function() _G.SentexBacanerias.Spawn("barril") end },
             { name = "Contenedor", type = "action", onClick = function() _G.SentexBacanerias.Spawn("contenedor") end },
             { name = "Contenedor abierto", type = "action", onClick = function() _G.SentexBacanerias.Spawn("contenedor_abierto") end },
-            { name = "Contenedor basura", type = "action", onClick = function() _G.SentexBacanerias.Spawn("dumpster") end }
+            { name = "Contenedor basura", type = "action", onClick = function() _G.SentexBacanerias.Spawn("dumpster") end },
+            { name = "Contenedor industrial", type = "action", onClick = function() _G.SentexBacanerias.Spawn("camion_contenedor") end },
+            { name = "Deposito industrial", type = "action", onClick = function() _G.SentexBacanerias.Spawn("deposito") end },
+            { name = "Generador", type = "action", onClick = function() _G.SentexBacanerias.Spawn("generador") end },
+            { name = "Caseta de obra", type = "action", onClick = function() _G.SentexBacanerias.Spawn("caseta") end },
+            { name = "Andamio", type = "action", onClick = function() _G.SentexBacanerias.Spawn("andamio") end },
+            { name = "Farola", type = "action", onClick = function() _G.SentexBacanerias.Spawn("farola") end },
+            { name = "Cabina telefonica", type = "action", onClick = function() _G.SentexBacanerias.Spawn("cabina") end },
+            { name = "Hidrante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("hidrante") end },
+            { name = "Caja grande", type = "action", onClick = function() _G.SentexBacanerias.Spawn("caja_grande") end },
+            { name = "Tubos", type = "action", onClick = function() _G.SentexBacanerias.Spawn("tubos") end }
         }},
         { name = "Deco", items = {
             { name = "Bola gigante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("bola_gigante") end },
@@ -1960,14 +2158,49 @@ Menu.Categories = {
             { name = "Pantalla", type = "action", onClick = function() _G.SentexBacanerias.Spawn("pantalla") end },
             { name = "Altavoz", type = "action", onClick = function() _G.SentexBacanerias.Spawn("altavoz") end },
             { name = "Fogata", type = "action", onClick = function() _G.SentexBacanerias.Spawn("fogata") end },
-            { name = "Caja grande", type = "action", onClick = function() _G.SentexBacanerias.Spawn("caja_grande") end },
-            { name = "Tubos", type = "action", onClick = function() _G.SentexBacanerias.Spawn("tubos") end }
+            { name = "Estatua", type = "action", onClick = function() _G.SentexBacanerias.Spawn("estatua") end },
+            { name = "Fuente", type = "action", onClick = function() _G.SentexBacanerias.Spawn("fuente") end },
+            { name = "Escenario", type = "action", onClick = function() _G.SentexBacanerias.Spawn("escenario") end },
+            { name = "Foco de escenario", type = "action", onClick = function() _G.SentexBacanerias.Spawn("foco") end },
+            { name = "Sofa", type = "action", onClick = function() _G.SentexBacanerias.Spawn("sofa") end },
+            { name = "Cama", type = "action", onClick = function() _G.SentexBacanerias.Spawn("cama") end },
+            { name = "Nevera", type = "action", onClick = function() _G.SentexBacanerias.Spawn("nevera") end },
+            { name = "Maquina refrescos", type = "action", onClick = function() _G.SentexBacanerias.Spawn("maquina_refrescos") end }
         }},
         { name = "Naturaleza", items = {
             { name = "Arbol pino", type = "action", onClick = function() _G.SentexBacanerias.Spawn("arbol_pino") end },
+            { name = "Arbol grande", type = "action", onClick = function() _G.SentexBacanerias.Spawn("arbol_grande") end },
+            { name = "Arbol seco", type = "action", onClick = function() _G.SentexBacanerias.Spawn("arbol_seco") end },
             { name = "Palmera", type = "action", onClick = function() _G.SentexBacanerias.Spawn("palmera") end },
+            { name = "Palmera grande", type = "action", onClick = function() _G.SentexBacanerias.Spawn("palmera_grande") end },
             { name = "Cactus", type = "action", onClick = function() _G.SentexBacanerias.Spawn("cactus") end },
-            { name = "Arbusto", type = "action", onClick = function() _G.SentexBacanerias.Spawn("arbusto") end }
+            { name = "Cactus grande", type = "action", onClick = function() _G.SentexBacanerias.Spawn("cactus_grande") end },
+            { name = "Arbusto", type = "action", onClick = function() _G.SentexBacanerias.Spawn("arbusto") end },
+            { name = "Seto", type = "action", onClick = function() _G.SentexBacanerias.Spawn("seto") end },
+            { name = "Jardinera", type = "action", onClick = function() _G.SentexBacanerias.Spawn("jardinera") end },
+            { name = "Roca media", type = "action", onClick = function() _G.SentexBacanerias.Spawn("roca_media") end },
+            { name = "Roca grande", type = "action", onClick = function() _G.SentexBacanerias.Spawn("roca_grande") end },
+            { name = "Tronco", type = "action", onClick = function() _G.SentexBacanerias.Spawn("tronco") end }
+        }},
+        { name = "Enormes", items = {
+            { name = "Mega bloque 01", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_bloque_01") end },
+            { name = "Mega bloque 02", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_bloque_02") end },
+            { name = "Mega bloque 03", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_bloque_03") end },
+            { name = "Mega bloque 04", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_bloque_04") end },
+            { name = "Mega bloque 05", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_bloque_05") end },
+            { name = "Mega rampa curva", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_rampa_curva") end },
+            { name = "Mega rampa de salto", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_rampa_salto") end },
+            { name = "Mega tubo", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_tubo") end },
+            { name = "Mega tubo cruce", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_tubo_cruce") end },
+            { name = "Mega anillo", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_anillo") end },
+            { name = "Molino enorme", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_molino") end },
+            { name = "Grua enorme", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_grua") end },
+            { name = "Radar enorme", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_radar") end },
+            { name = "Roca colosal", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_roca") end },
+            { name = "Asteroide colosal", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_asteroide") end },
+            { name = "Asteroide colosal flotante", type = "action", onClick = function() _G.SentexBacanerias.Spawn("mega_asteroide_alto") end },
+            { name = "Plataforma enorme", type = "action", onClick = function() _G.SentexBacanerias.Spawn("plataforma_alta") end },
+            { name = "Contenedor enorme", type = "action", onClick = function() _G.SentexBacanerias.Spawn("plataforma_metal") end }
         }},
         { name = "Presets", items = {
             { name = "Circuito de conos", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("circuito_conos") end },
@@ -1975,7 +2208,17 @@ Menu.Categories = {
             { name = "Campamento", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("campamento") end },
             { name = "Zona meteoritos", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("zona_meteoritos") end },
             { name = "Escenario calle", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("escenario_calle") end },
-            { name = "Set Youtube", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("set_youtube") end }
+            { name = "Set Youtube", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("set_youtube") end },
+            { name = "Fortaleza colosal", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("fortaleza_colosal") end },
+            { name = "Megapuente", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("megapuente") end },
+            { name = "Torre colosal", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("torre_colosal") end },
+            { name = "Arena gigante", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("arena_gigante") end },
+            { name = "Campo meteoritos colosal", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("campo_meteoritos_colosal") end },
+            { name = "Circuito tubos gigante", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("circuito_tubos_gigante") end },
+            { name = "Ciudad industrial", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("ciudad_industrial") end },
+            { name = "Bosque gigante", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("bosque_gigante") end },
+            { name = "Escenario festival", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("escenario_festival") end },
+            { name = "Muralla enorme", type = "action", onClick = function() _G.SentexBacanerias.SpawnPreset("muralla_enorme") end }
         }},
         { name = "Gestion", items = {
             { name = "Distancia spawn", type = "slider", value = 45, min = 10, max = 200, step = 5, onClick = function(value) _G.SentexBacanerias.SetDistance(value) end },
