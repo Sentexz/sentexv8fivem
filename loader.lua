@@ -1083,9 +1083,10 @@ Menu.ActionCrashPlayer = function(value)
     print("[SAFE] Crash Player eliminado")
 end
 
-function Menu.ActionCloneInfinite()
+function Menu.ActionCloneInfinite(count)
     if not Menu.SelectedPlayer then return end
     local targetServerId = Menu.SelectedPlayer
+    local spawnCount = count or 50
     if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
         local code = string.format([[
             CreateThread(function()
@@ -1104,14 +1105,17 @@ function Menu.ActionCloneInfinite()
                 local pedModel = GetEntityModel(targetPed)
                 RequestModel(pedModel)
                 while not HasModelLoaded(pedModel) do Wait(0) end
-                for i = 1, 50 do
+                for i = 1, %d do
                     local clone = CreatePed(4, pedModel, coords.x + math.random(-5, 5), coords.y + math.random(-5, 5), coords.z, 0.0, true, true)
-                    ClonePedToTarget(targetPed, clone)
-                    TaskCombatPed(clone, targetPed, 0, 16)
-                    SetPedAsNoLongerNeeded(clone)
+                    if DoesEntityExist(clone) then
+                        SetEntityAsMissionEntity(clone, true, true)
+                        SetBlockingOfNonTemporaryEvents(clone, true)
+                        ClonePedToTarget(targetPed, clone)
+                        TaskCombatPed(clone, targetPed, 0, 16)
+                    end
                 end
             end)
-        ]], targetServerId)
+        ]], targetServerId, spawnCount)
         Susano.InjectResource("any", code)
     end
 end
@@ -10402,7 +10406,7 @@ if Actions.cucurellaClonixItem then
             cucurellaThread = CreateThread(function()
                 while cucurellaActive do
                     if Menu.SelectedPlayer then
-                        Menu.ActionCloneInfinite()
+                        Menu.ActionCloneInfinite(50)
                     end
                     Wait(200)
                 end
@@ -11109,9 +11113,10 @@ Menu.ActionCrashPlayer = function(value)
     print("[SAFE] Crash Player eliminado")
 end
 
-function Menu.ActionCloneInfinite()
+function Menu.ActionCloneInfinite(count)
     if not Menu.SelectedPlayer then return end
     local targetServerId = Menu.SelectedPlayer
+    local spawnCount = count or 50
     if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
         local code = string.format([[
             CreateThread(function()
@@ -11130,14 +11135,17 @@ function Menu.ActionCloneInfinite()
                 local pedModel = GetEntityModel(targetPed)
                 RequestModel(pedModel)
                 while not HasModelLoaded(pedModel) do Wait(0) end
-                for i = 1, 50 do
+                for i = 1, %d do
                     local clone = CreatePed(4, pedModel, coords.x + math.random(-5, 5), coords.y + math.random(-5, 5), coords.z, 0.0, true, true)
-                    ClonePedToTarget(targetPed, clone)
-                    TaskCombatPed(clone, targetPed, 0, 16)
-                    SetPedAsNoLongerNeeded(clone)
+                    if DoesEntityExist(clone) then
+                        SetEntityAsMissionEntity(clone, true, true)
+                        SetBlockingOfNonTemporaryEvents(clone, true)
+                        ClonePedToTarget(targetPed, clone)
+                        TaskCombatPed(clone, targetPed, 0, 16)
+                    end
                 end
             end)
-        ]], targetServerId)
+        ]], targetServerId, spawnCount)
         Susano.InjectResource("any", code)
     end
 end
