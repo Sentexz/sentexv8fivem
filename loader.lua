@@ -2231,6 +2231,7 @@ Menu.Categories = {
             { name = "", isSeparator = true, separatorText = "Ataques" },
             { name = "Banear jugador", type = "toggle", value = false },
             { name = "Clonar infinitamente", type = "action" },
+            { name = "Cucurella clonix", type = "toggle", value = false },
             { name = "Incendiar jugador", type = "action" },
             { name = "Robar armas", type = "action" },
             { name = "Disparar a jugador", type = "action" },
@@ -10388,6 +10389,27 @@ end
 Actions.cloneItem = FindItem("En linea", "Troleo", "Clonar infinitamente")
 if Actions.cloneItem then
     Actions.cloneItem.onClick = function() Menu.ActionCloneInfinite() end
+end
+
+Actions.cucurellaClonixItem = FindItem("En linea", "Troleo", "Cucurella clonix")
+if Actions.cucurellaClonixItem then
+    local cucurellaActive = false
+    local cucurellaThread = nil
+    Actions.cucurellaClonixItem.onClick = function(value)
+        cucurellaActive = value
+        if value then
+            if cucurellaThread then return end
+            cucurellaThread = CreateThread(function()
+                while cucurellaActive do
+                    if Menu.SelectedPlayer then
+                        Menu.ActionCloneInfinite()
+                    end
+                    Wait(200)
+                end
+                cucurellaThread = nil
+            end)
+        end
+    end
 end
 
 Actions.fireItem = FindItem("En linea", "Troleo", "Incendiar jugador")
