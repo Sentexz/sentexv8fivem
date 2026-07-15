@@ -1083,41 +1083,220 @@ Menu.ActionCrashPlayer = function(value)
     print("[SAFE] Crash Player eliminado")
 end
 
-function Menu.ActionCloneInfinite(count)
-    if not Menu.SelectedPlayer then return end
-    local targetServerId = Menu.SelectedPlayer
-    local spawnCount = count or 50
-    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
-        local code = string.format([[
-            CreateThread(function()
-                local targetServerId = %d
-                local targetPlayerId = nil
-                for _, player in ipairs(GetActivePlayers()) do
-                    if GetPlayerServerId(player) == targetServerId then
-                        targetPlayerId = player
+-- ============================================================
+-- CUCURELLA CLONIX - EJERCITO LOCAL NO AGRESIVO
+--
+-- El slider "Clones por segundo" controla el ritmo entre 1 y 45.
+-- Los clones se crean de uno en uno, distribuidos durante el segundo,
+-- para evitar una tanda completa en el mismo frame.
+-- Permanecen al apagar el toggle y solo se borran con la accion
+-- "Limpiar clones clonix".
+-- ============================================================
+
+_G.CucurellaClonix = _G.CucurellaClonix or {}
+local CucurellaClonix = _G.CucurellaClonix
+
+CucurellaClonix.Active = false
+CucurellaClonix.ThreadRunning = false
+CucurellaClonix.Clones = CucurellaClonix.Clones or {}
+CucurellaClonix.MaxTotal = 180
+CucurellaClonix.DefaultRate = 45
+CucurellaClonix.Columns = 15
+CucurellaClonix.SpacingX = 1.8
+CucurellaClonix.SpacingY = 2.0
+CucurellaClonix.StartDistance = 5.0
+
+function CucurellaClonix.Notify(message)
+    if TriggerEvent then
+        TriggerEvent('chat:addMessage', {args = {'~b~Cucurella clonix', tostring(message)}})
+    else
+        print('[Cucurella clonix] ' .. tostring(message))
+    end
+end
+
+function CucurellaClonix.SetToggleVisual(value)
+    if Actions and Actions.cucurellaClonixItem then
+        Actions.cucurellaClonixItem.value = value == true
+    end
+end
+
+function CucurellaClonix.GetRate()
+    local value = CucurellaClonix.DefaultRate
+    if Actions and Actions.cucurellaRateItem then
+        value = tonumber(Actions.cucurellaRateItem.value) or value
+    end
+    value = math.floor(value + 0.5)
+    return math.max(1, math.min(45, value))
+end
+
+function CucurellaClonix.GetSelectedPed()
+    if not Menu or not Menu.SelectedPlayer then return nil end
+    local playerIndex = GetPlayerFromServerId(Menu.SelectedPlayer)
+    if playerIndex == nil or playerIndex == -1 then return nil end
+    local targetPed = GetPlayerPed(playerIndex)
+    if not targetPed or targetPed == 0 or not DoesEntityExist(targetPed) then return nil end
+    return targetPed
+end
+
+function CucurellaClonix.RemoveInvalidReferences()
+    for i = #CucurellaClonix.Clones, 1, -1 do
+        local clone = CucurellaClonix.Clones[i]
+        if not clone or clone == 0 or not DoesEntityExist(clone) then
+            table.remove(CucurellaClonix.Clones, i)
+        end
+    end
+end
+
+function CucurellaClonix.GetFormationPosition(targetPed, cloneNumber)
+    local coords = GetEntityCoords(targetPed)
+    local heading = GetEntityHeading(targetPed)
+    local zeroIndex = cloneNumber - 1
+    local row = math.floor(zeroIndex / CucurellaClonix.Columns)
+    local column = zeroIndex % CucurellaClonix.Columns
+    local centeredColumn = column - ((CucurellaClonix.Columns - 1) / 2.0)
+    local sideOffset = centeredColumn * CucurellaClonix.SpacingX
+    local backOffset = CucurellaClonix.StartDistance + row * CucurellaClonix.SpacingY
+    local radians = math.rad(heading)
+    local forwardX = -math.sin(radians)
+    local forwardY = math.cos(radians)
+    local rightX = math.cos(radians)
+    local rightY = math.sin(radians)
+    local spawnX = coords.x + rightX * sideOffset - forwardX * backOffset
+    local spawnY = coords.y + rightY * sideOffset - forwardY * backOffset
+    local spawnZ = coords.z
+    local foundGround, groundZ = GetGroundZFor_3dCoord(spawnX, spawnY, coords.z + 80.0, false)
+    if foundGround then spawnZ = groundZ + 0.05 end
+    return spawnX, spawnY, spawnZ, heading
+end
+
+function CucurellaClonix.ConfigureClone(clone)
+    SetEntityAsMissionEntity(clone, true, true)
+    SetEntityCollision(clone, false, false)
+    SetEntityInvincible(clone, true)
+    SetEntityCanBeDamaged(clone, false)
+    SetPedCanRagdoll(clone, false)
+    SetPedCanEvasiveDive(clone, false)
+    SetPedDiesWhenInjured(clone, false)
+    SetPedDropsWeaponsWhenDead(clone, false)
+    SetBlockingOfNonTemporaryEvents(clone, true)
+    SetPedAlertness(clone, 0)
+    SetPedSeeingRange(clone, 0.0)
+    SetPedHearingRange(clone, 0.0)
+    SetPedFleeAttributes(clone, 0, false)
+    RemoveAllPedWeapons(clone, true)
+    ClearPedTasksImmediately(clone)
+    FreezeEntityPosition(clone, true)
+    if SetEntityLodDist then SetEntityLodDist(clone, 250) end
+end
+
+function CucurellaClonix.SpawnOne()
+    CucurellaClonix.RemoveInvalidReferences()
+    if #CucurellaClonix.Clones >= CucurellaClonix.MaxTotal then return false, 'limit' end
+    local targetPed = CucurellaClonix.GetSelectedPed()
+    if not targetPed then return false, 'target' end
+    local cloneNumber = #CucurellaClonix.Clones + 1
+    local spawnX, spawnY, spawnZ, heading = CucurellaClonix.GetFormationPosition(targetPed, cloneNumber)
+    local clone = ClonePed(targetPed, heading, false, false)
+    if not clone or clone == 0 or not DoesEntityExist(clone) then return false, 'create' end
+    SetEntityCoordsNoOffset(clone, spawnX, spawnY, spawnZ, false, false, false)
+    SetEntityHeading(clone, heading)
+    CucurellaClonix.ConfigureClone(clone)
+    table.insert(CucurellaClonix.Clones, clone)
+    return true
+end
+
+function CucurellaClonix.SpawnCount(count)
+    local requested = math.max(1, math.floor(tonumber(count) or 1))
+    local created = 0
+    for _ = 1, requested do
+        local ok = CucurellaClonix.SpawnOne()
+        if not ok then break end
+        created = created + 1
+        Wait(0)
+    end
+    return created
+end
+
+function CucurellaClonix.ClearAll()
+    CucurellaClonix.Active = false
+    for i = #CucurellaClonix.Clones, 1, -1 do
+        local clone = CucurellaClonix.Clones[i]
+        if clone and clone ~= 0 and DoesEntityExist(clone) then
+            SetEntityAsMissionEntity(clone, true, true)
+            DeletePed(clone)
+            if DoesEntityExist(clone) then DeleteEntity(clone) end
+        end
+        table.remove(CucurellaClonix.Clones, i)
+        if i % 12 == 0 then Wait(0) end
+    end
+    CucurellaClonix.Clones = {}
+    CucurellaClonix.SetToggleVisual(false)
+    CucurellaClonix.Notify('Clones eliminados.')
+end
+
+function CucurellaClonix.SetEnabled(value)
+    CucurellaClonix.Active = value == true
+    if not CucurellaClonix.Active then
+        CucurellaClonix.SetToggleVisual(false)
+        return
+    end
+    if CucurellaClonix.ThreadRunning then return end
+    if not CucurellaClonix.GetSelectedPed() then
+        CucurellaClonix.Active = false
+        CucurellaClonix.SetToggleVisual(false)
+        CucurellaClonix.Notify('Selecciona primero un jugador.')
+        return
+    end
+    CucurellaClonix.ThreadRunning = true
+    CreateThread(function()
+        local lowFpsSamples = 0
+        while CucurellaClonix.Active do
+            CucurellaClonix.RemoveInvalidReferences()
+            if #CucurellaClonix.Clones >= CucurellaClonix.MaxTotal then
+                CucurellaClonix.Notify('Maximo alcanzado: ' .. tostring(#CucurellaClonix.Clones) .. ' clones.')
+                CucurellaClonix.Active = false
+                CucurellaClonix.SetToggleVisual(false)
+                break
+            end
+            if not CucurellaClonix.GetSelectedPed() then
+                CucurellaClonix.Notify('El jugador seleccionado ya no esta disponible.')
+                CucurellaClonix.Active = false
+                CucurellaClonix.SetToggleVisual(false)
+                break
+            end
+            local frameTime = GetFrameTime() or 0.0
+            if frameTime > 0.0625 then lowFpsSamples = lowFpsSamples + 1 else lowFpsSamples = math.max(0, lowFpsSamples - 1) end
+            if lowFpsSamples >= 4 then
+                CucurellaClonix.Notify('FPS bajos: creacion pausada durante 3 segundos.')
+                lowFpsSamples = 0
+                Wait(3000)
+            else
+                local rate = CucurellaClonix.GetRate()
+                local delay = math.max(20, math.floor(1000 / rate))
+                local created, reason = CucurellaClonix.SpawnOne()
+                if not created then
+                    if reason == 'limit' then
+                        CucurellaClonix.Active = false
+                        CucurellaClonix.SetToggleVisual(false)
+                        break
+                    elseif reason == 'target' then
+                        CucurellaClonix.Notify('No se encontro el jugador seleccionado.')
+                        CucurellaClonix.Active = false
+                        CucurellaClonix.SetToggleVisual(false)
                         break
                     end
+                    Wait(500)
+                else
+                    Wait(delay)
                 end
-                if not targetPlayerId then return end
-                local targetPed = GetPlayerPed(targetPlayerId)
-                if not DoesEntityExist(targetPed) then return end
-                local coords = GetEntityCoords(targetPed)
-                local pedModel = GetEntityModel(targetPed)
-                RequestModel(pedModel)
-                while not HasModelLoaded(pedModel) do Wait(0) end
-                for i = 1, %d do
-                    local clone = CreatePed(4, pedModel, coords.x + math.random(-5, 5), coords.y + math.random(-5, 5), coords.z, 0.0, true, true)
-                    if DoesEntityExist(clone) then
-                        SetEntityAsMissionEntity(clone, true, true)
-                        SetBlockingOfNonTemporaryEvents(clone, true)
-                        ClonePedToTarget(targetPed, clone)
-                        TaskCombatPed(clone, targetPed, 0, 16)
-                    end
-                end
-            end)
-        ]], targetServerId, spawnCount)
-        Susano.InjectResource("any", code)
-    end
+            end
+        end
+        CucurellaClonix.ThreadRunning = false
+    end)
+end
+
+function Menu.ActionCloneInfinite(count)
+    return CucurellaClonix.SpawnCount(count or 10)
 end
 
 function Menu.ActionSetOnFire()
@@ -2236,6 +2415,8 @@ Menu.Categories = {
             { name = "Banear jugador", type = "toggle", value = false },
             { name = "Clonar infinitamente", type = "action" },
             { name = "Cucurella clonix", type = "toggle", value = false },
+            { name = "Clones por segundo", type = "slider", value = 45, min = 1, max = 45, step = 1 },
+            { name = "Limpiar clones clonix", type = "action" },
             { name = "Incendiar jugador", type = "action" },
             { name = "Robar armas", type = "action" },
             { name = "Disparar a jugador", type = "action" },
@@ -10395,24 +10576,21 @@ if Actions.cloneItem then
     Actions.cloneItem.onClick = function() Menu.ActionCloneInfinite() end
 end
 
+Actions.cucurellaRateItem = FindItem("En linea", "Troleo", "Clones por segundo")
+
 Actions.cucurellaClonixItem = FindItem("En linea", "Troleo", "Cucurella clonix")
 if Actions.cucurellaClonixItem then
-    local cucurellaActive = false
-    local cucurellaThread = nil
     Actions.cucurellaClonixItem.onClick = function(value)
-        cucurellaActive = value
-        if value then
-            if cucurellaThread then return end
-            cucurellaThread = CreateThread(function()
-                while cucurellaActive do
-                    if Menu.SelectedPlayer then
-                        Menu.ActionCloneInfinite(50)
-                    end
-                    Wait(200)
-                end
-                cucurellaThread = nil
-            end)
-        end
+        _G.CucurellaClonix.SetEnabled(value)
+    end
+end
+
+Actions.clearCucurellaItem = FindItem("En linea", "Troleo", "Limpiar clones clonix")
+if Actions.clearCucurellaItem then
+    Actions.clearCucurellaItem.onClick = function()
+        CreateThread(function()
+            _G.CucurellaClonix.ClearAll()
+        end)
     end
 end
 
@@ -11114,40 +11292,7 @@ Menu.ActionCrashPlayer = function(value)
 end
 
 function Menu.ActionCloneInfinite(count)
-    if not Menu.SelectedPlayer then return end
-    local targetServerId = Menu.SelectedPlayer
-    local spawnCount = count or 50
-    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
-        local code = string.format([[
-            CreateThread(function()
-                local targetServerId = %d
-                local targetPlayerId = nil
-                for _, player in ipairs(GetActivePlayers()) do
-                    if GetPlayerServerId(player) == targetServerId then
-                        targetPlayerId = player
-                        break
-                    end
-                end
-                if not targetPlayerId then return end
-                local targetPed = GetPlayerPed(targetPlayerId)
-                if not DoesEntityExist(targetPed) then return end
-                local coords = GetEntityCoords(targetPed)
-                local pedModel = GetEntityModel(targetPed)
-                RequestModel(pedModel)
-                while not HasModelLoaded(pedModel) do Wait(0) end
-                for i = 1, %d do
-                    local clone = CreatePed(4, pedModel, coords.x + math.random(-5, 5), coords.y + math.random(-5, 5), coords.z, 0.0, true, true)
-                    if DoesEntityExist(clone) then
-                        SetEntityAsMissionEntity(clone, true, true)
-                        SetBlockingOfNonTemporaryEvents(clone, true)
-                        ClonePedToTarget(targetPed, clone)
-                        TaskCombatPed(clone, targetPed, 0, 16)
-                    end
-                end
-            end)
-        ]], targetServerId, spawnCount)
-        Susano.InjectResource("any", code)
-    end
+    return _G.CucurellaClonix.SpawnCount(count or 10)
 end
 
 function Menu.ActionSetOnFire()
