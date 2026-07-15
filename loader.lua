@@ -1084,13 +1084,16 @@ Menu.ActionCrashPlayer = function(value)
 end
 
 -- ============================================================
--- CUCURELLA CLONIX - EJERCITO LOCAL NO AGRESIVO
+-- CUCURELLA CLONIX - EJERCITO LOCAL PERSISTENTE
 --
 -- El slider "Clones por segundo" controla el ritmo entre 1 y 45.
--- Los clones se crean de uno en uno alrededor del jugador, distribuidos durante el segundo,
--- para evitar una tanda completa en el mismo frame.
--- Permanecen al apagar el toggle y solo se borran con la accion
--- "Limpiar clones clonix".
+-- Mientras el toggle este activo continuaran apareciendo clones.
+-- Al apagar el toggle solamente se detiene la creacion: los clones
+-- existentes permanecen hasta usar "Limpiar clones clonix".
+--
+-- Esta version no tiene un limite numerico fijo. Incluye solamente
+-- una pausa/detencion de emergencia si el cliente entra en una caida
+-- critica de rendimiento. No elimina clones automaticamente.
 -- ============================================================
 
 _G.CucurellaClonix = _G.CucurellaClonix or {}
@@ -1099,16 +1102,27 @@ local CucurellaClonix = _G.CucurellaClonix
 CucurellaClonix.Active = false
 CucurellaClonix.ThreadRunning = false
 CucurellaClonix.Clones = CucurellaClonix.Clones or {}
-CucurellaClonix.MaxTotal = 180
 CucurellaClonix.DefaultRate = 45
 
--- Distribucion alrededor del jugador seleccionado.
--- Los primeros clones aparecen cerca y los siguientes amplian el circulo.
+-- Distribucion en espiral alrededor del jugador.
 CucurellaClonix.MinRadius = 3.0
-CucurellaClonix.MaxRadius = 18.0
-CucurellaClonix.AngleJitterDegrees = 24.0
-CucurellaClonix.RadiusJitter = 1.25
+CucurellaClonix.RadialGrowth = 0.90
+CucurellaClonix.AngleJitterDegrees = 14.0
+CucurellaClonix.RadiusJitter = 0.55
 CucurellaClonix.FaceTarget = true
+
+-- Elevacion adicional despues de calcular la base real del modelo.
+CucurellaClonix.GroundPadding = 0.035
+
+-- Persistencia visual local.
+CucurellaClonix.LodDistance = 1000
+CucurellaClonix.CullingRadius = 1000.0
+
+-- Proteccion: solo detiene o pausa; nunca borra clones.
+CucurellaClonix.LowFpsFrameTime = 0.0625
+CucurellaClonix.CriticalFrameTime = 0.1100
+CucurellaClonix.LowFpsSamplesRequired = 4
+CucurellaClonix.CriticalSamplesRequired = 3
 
 function CucurellaClonix.Notify(message)
     if TriggerEvent then
@@ -1126,36 +1140,88 @@ end
 
 function CucurellaClonix.GetRate()
     local value = CucurellaClonix.DefaultRate
+
     if Actions and Actions.cucurellaRateItem then
         value = tonumber(Actions.cucurellaRateItem.value) or value
     end
+
     value = math.floor(value + 0.5)
     return math.max(1, math.min(45, value))
 end
 
 function CucurellaClonix.GetSelectedPed()
     if not Menu or not Menu.SelectedPlayer then return nil end
+
     local playerIndex = GetPlayerFromServerId(Menu.SelectedPlayer)
     if playerIndex == nil or playerIndex == -1 then return nil end
+
     local targetPed = GetPlayerPed(playerIndex)
-    if not targetPed or targetPed == 0 or not DoesEntityExist(targetPed) then return nil end
+    if not targetPed or targetPed == 0 or not DoesEntityExist(targetPed) then
+        return nil
+    end
+
     return targetPed
 end
 
 function CucurellaClonix.RemoveInvalidReferences()
+    -- No elimina ningun ped. Solo retira handles que el motor ya invalido.
     for i = #CucurellaClonix.Clones, 1, -1 do
         local clone = CucurellaClonix.Clones[i]
+
         if not clone or clone == 0 or not DoesEntityExist(clone) then
             table.remove(CucurellaClonix.Clones, i)
         end
     end
 end
 
+function CucurellaClonix.GetReliableGroundZ(x, y, referenceZ)
+    RequestCollisionAtCoord(x, y, referenceZ)
+
+    local testHeights = {
+        referenceZ + 100.0,
+        referenceZ + 50.0,
+        referenceZ + 20.0,
+        referenceZ + 5.0
+    }
+
+    for attempt = 1, 8 do
+        for _, testZ in ipairs(testHeights) do
+            local found, groundZ = GetGroundZFor_3dCoord(x, y, testZ, false)
+
+            if found then
+                return groundZ
+            end
+        end
+
+        Wait(0)
+    end
+
+    return referenceZ
+end
+
+function CucurellaClonix.GetModelGroundOffset(entity)
+    local model = GetEntityModel(entity)
+
+    if not model or model == 0 then
+        return 1.0
+    end
+
+    local minimum, maximum = GetModelDimensions(model)
+
+    if minimum and minimum.z then
+        -- El origen del ped suele estar por encima de sus pies.
+        -- Restar minimum.z coloca la parte inferior del modelo sobre el suelo.
+        return math.max(0.0, -minimum.z) + CucurellaClonix.GroundPadding
+    end
+
+    return 1.0
+end
+
 function CucurellaClonix.GetFormationPosition(targetPed, cloneNumber)
     local coords = GetEntityCoords(targetPed)
 
-    -- Angulo aureo: reparte los clones alrededor del jugador y evita filas.
-    -- El pequeno jitter conserva el aspecto irregular del script original.
+    -- Espiral aurea: no crea filas y sigue ampliando el ejercito sin
+    -- depender de un maximo total predefinido.
     local goldenAngle = 137.507764
     local jitter = math.random(
         -math.floor(CucurellaClonix.AngleJitterDegrees),
@@ -1165,36 +1231,19 @@ function CucurellaClonix.GetFormationPosition(targetPed, cloneNumber)
     local angleDegrees = ((cloneNumber - 1) * goldenAngle + jitter) % 360.0
     local angle = math.rad(angleDegrees)
 
-    -- La raiz cuadrada distribuye los NPC por toda el area circular,
-    -- en lugar de concentrarlos solamente en el borde.
-    local progress = math.sqrt(
-        math.max(0.0, (cloneNumber - 1) / math.max(1, CucurellaClonix.MaxTotal - 1))
-    )
-
     local radius = CucurellaClonix.MinRadius
-        + (CucurellaClonix.MaxRadius - CucurellaClonix.MinRadius) * progress
+        + math.sqrt(math.max(0, cloneNumber - 1)) * CucurellaClonix.RadialGrowth
         + (math.random() * 2.0 - 1.0) * CucurellaClonix.RadiusJitter
 
-    radius = math.max(CucurellaClonix.MinRadius, math.min(CucurellaClonix.MaxRadius, radius))
+    radius = math.max(CucurellaClonix.MinRadius, radius)
 
     local spawnX = coords.x + math.cos(angle) * radius
     local spawnY = coords.y + math.sin(angle) * radius
-    local spawnZ = coords.z
-
-    local foundGround, groundZ = GetGroundZFor_3dCoord(
-        spawnX,
-        spawnY,
-        coords.z + 80.0,
-        false
-    )
-
-    if foundGround then
-        spawnZ = groundZ + 0.05
-    end
+    local groundZ = CucurellaClonix.GetReliableGroundZ(spawnX, spawnY, coords.z)
 
     local heading
+
     if CucurellaClonix.FaceTarget then
-        -- Miran hacia el jugador del centro, reforzando el efecto de circulo.
         heading = GetHeadingFromVector_2d(
             coords.x - spawnX,
             coords.y - spawnY
@@ -1203,14 +1252,29 @@ function CucurellaClonix.GetFormationPosition(targetPed, cloneNumber)
         heading = math.random(0, 359) + 0.0
     end
 
-    return spawnX, spawnY, spawnZ, heading
+    return spawnX, spawnY, groundZ, heading
 end
 
 function CucurellaClonix.ConfigureClone(clone)
     SetEntityAsMissionEntity(clone, true, true)
-    SetEntityCollision(clone, false, false)
+
+    -- Evitar que el motor lo marque para limpieza ambiental.
+    if SetEntityCleanupByEngine then
+        SetEntityCleanupByEngine(clone, false)
+    end
+
+    SetEntityVisible(clone, true, false)
+    ResetEntityAlpha(clone)
+    SetEntityAlpha(clone, 255, false)
+
     SetEntityInvincible(clone, true)
     SetEntityCanBeDamaged(clone, false)
+    SetEntityCollision(clone, false, false)
+
+    if SetEntityDynamic then
+        SetEntityDynamic(clone, false)
+    end
+
     SetPedCanRagdoll(clone, false)
     SetPedCanEvasiveDive(clone, false)
     SetPedDiesWhenInjured(clone, false)
@@ -1220,24 +1284,54 @@ function CucurellaClonix.ConfigureClone(clone)
     SetPedSeeingRange(clone, 0.0)
     SetPedHearingRange(clone, 0.0)
     SetPedFleeAttributes(clone, 0, false)
+    SetPedKeepTask(clone, true)
+
     RemoveAllPedWeapons(clone, true)
     ClearPedTasksImmediately(clone)
     FreezeEntityPosition(clone, true)
-    if SetEntityLodDist then SetEntityLodDist(clone, 250) end
+
+    if SetEntityLodDist then
+        SetEntityLodDist(clone, CucurellaClonix.LodDistance)
+    end
+
+    if SetEntityDistanceCullingRadius then
+        SetEntityDistanceCullingRadius(clone, CucurellaClonix.CullingRadius)
+    end
 end
 
 function CucurellaClonix.SpawnOne()
     CucurellaClonix.RemoveInvalidReferences()
-    if #CucurellaClonix.Clones >= CucurellaClonix.MaxTotal then return false, 'limit' end
+
     local targetPed = CucurellaClonix.GetSelectedPed()
     if not targetPed then return false, 'target' end
+
     local cloneNumber = #CucurellaClonix.Clones + 1
-    local spawnX, spawnY, spawnZ, heading = CucurellaClonix.GetFormationPosition(targetPed, cloneNumber)
+    local spawnX, spawnY, groundZ, heading =
+        CucurellaClonix.GetFormationPosition(targetPed, cloneNumber)
+
+    -- false, false: clon local. No genera una entidad sincronizada de red.
     local clone = ClonePed(targetPed, heading, false, false)
-    if not clone or clone == 0 or not DoesEntityExist(clone) then return false, 'create' end
-    SetEntityCoordsNoOffset(clone, spawnX, spawnY, spawnZ, false, false, false)
+
+    if not clone or clone == 0 or not DoesEntityExist(clone) then
+        return false, 'create'
+    end
+
+    local groundOffset = CucurellaClonix.GetModelGroundOffset(clone)
+    local finalZ = groundZ + groundOffset
+
+    SetEntityCoordsNoOffset(
+        clone,
+        spawnX,
+        spawnY,
+        finalZ,
+        false,
+        false,
+        false
+    )
+
     SetEntityHeading(clone, heading)
     CucurellaClonix.ConfigureClone(clone)
+
     table.insert(CucurellaClonix.Clones, clone)
     return true
 end
@@ -1245,27 +1339,40 @@ end
 function CucurellaClonix.SpawnCount(count)
     local requested = math.max(1, math.floor(tonumber(count) or 1))
     local created = 0
+
     for _ = 1, requested do
         local ok = CucurellaClonix.SpawnOne()
         if not ok then break end
+
         created = created + 1
         Wait(0)
     end
+
     return created
 end
 
 function CucurellaClonix.ClearAll()
     CucurellaClonix.Active = false
+
     for i = #CucurellaClonix.Clones, 1, -1 do
         local clone = CucurellaClonix.Clones[i]
+
         if clone and clone ~= 0 and DoesEntityExist(clone) then
             SetEntityAsMissionEntity(clone, true, true)
             DeletePed(clone)
-            if DoesEntityExist(clone) then DeleteEntity(clone) end
+
+            if DoesEntityExist(clone) then
+                DeleteEntity(clone)
+            end
         end
+
         table.remove(CucurellaClonix.Clones, i)
-        if i % 12 == 0 then Wait(0) end
+
+        if i % 12 == 0 then
+            Wait(0)
+        end
     end
+
     CucurellaClonix.Clones = {}
     CucurellaClonix.SetToggleVisual(false)
     CucurellaClonix.Notify('Clones eliminados.')
@@ -1273,37 +1380,67 @@ end
 
 function CucurellaClonix.SetEnabled(value)
     CucurellaClonix.Active = value == true
+
+    -- Al apagar solamente se detiene la creacion.
     if not CucurellaClonix.Active then
         CucurellaClonix.SetToggleVisual(false)
         return
     end
+
     if CucurellaClonix.ThreadRunning then return end
+
     if not CucurellaClonix.GetSelectedPed() then
         CucurellaClonix.Active = false
         CucurellaClonix.SetToggleVisual(false)
         CucurellaClonix.Notify('Selecciona primero un jugador.')
         return
     end
+
     CucurellaClonix.ThreadRunning = true
+
     CreateThread(function()
         local lowFpsSamples = 0
+        local criticalSamples = 0
+
         while CucurellaClonix.Active do
             CucurellaClonix.RemoveInvalidReferences()
-            if #CucurellaClonix.Clones >= CucurellaClonix.MaxTotal then
-                CucurellaClonix.Notify('Maximo alcanzado: ' .. tostring(#CucurellaClonix.Clones) .. ' clones.')
-                CucurellaClonix.Active = false
-                CucurellaClonix.SetToggleVisual(false)
-                break
-            end
+
             if not CucurellaClonix.GetSelectedPed() then
                 CucurellaClonix.Notify('El jugador seleccionado ya no esta disponible.')
                 CucurellaClonix.Active = false
                 CucurellaClonix.SetToggleVisual(false)
                 break
             end
+
             local frameTime = GetFrameTime() or 0.0
-            if frameTime > 0.0625 then lowFpsSamples = lowFpsSamples + 1 else lowFpsSamples = math.max(0, lowFpsSamples - 1) end
-            if lowFpsSamples >= 4 then
+
+            if frameTime >= CucurellaClonix.CriticalFrameTime then
+                criticalSamples = criticalSamples + 1
+            else
+                criticalSamples = math.max(0, criticalSamples - 1)
+            end
+
+            if frameTime >= CucurellaClonix.LowFpsFrameTime then
+                lowFpsSamples = lowFpsSamples + 1
+            else
+                lowFpsSamples = math.max(0, lowFpsSamples - 1)
+            end
+
+            -- Freno de emergencia: detiene el toggle, pero conserva todos
+            -- los clones ya creados.
+            if criticalSamples >= CucurellaClonix.CriticalSamplesRequired then
+                CucurellaClonix.Notify(
+                    'Rendimiento critico: se detuvo la creacion con '
+                    .. tostring(#CucurellaClonix.Clones)
+                    .. ' clones. No se ha eliminado ninguno.'
+                )
+
+                CucurellaClonix.Active = false
+                CucurellaClonix.SetToggleVisual(false)
+                break
+            end
+
+            if lowFpsSamples >= CucurellaClonix.LowFpsSamplesRequired then
                 CucurellaClonix.Notify('FPS bajos: creacion pausada durante 3 segundos.')
                 lowFpsSamples = 0
                 Wait(3000)
@@ -1311,23 +1448,22 @@ function CucurellaClonix.SetEnabled(value)
                 local rate = CucurellaClonix.GetRate()
                 local delay = math.max(20, math.floor(1000 / rate))
                 local created, reason = CucurellaClonix.SpawnOne()
+
                 if not created then
-                    if reason == 'limit' then
-                        CucurellaClonix.Active = false
-                        CucurellaClonix.SetToggleVisual(false)
-                        break
-                    elseif reason == 'target' then
+                    if reason == 'target' then
                         CucurellaClonix.Notify('No se encontro el jugador seleccionado.')
                         CucurellaClonix.Active = false
                         CucurellaClonix.SetToggleVisual(false)
                         break
                     end
-                    Wait(500)
+
+                    Wait(250)
                 else
                     Wait(delay)
                 end
             end
         end
+
         CucurellaClonix.ThreadRunning = false
     end)
 end
