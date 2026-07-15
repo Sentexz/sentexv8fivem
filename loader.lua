@@ -1087,7 +1087,7 @@ end
 -- CUCURELLA CLONIX - EJERCITO LOCAL NO AGRESIVO
 --
 -- El slider "Clones por segundo" controla el ritmo entre 1 y 45.
--- Los clones se crean de uno en uno, distribuidos durante el segundo,
+-- Los clones se crean de uno en uno alrededor del jugador, distribuidos durante el segundo,
 -- para evitar una tanda completa en el mismo frame.
 -- Permanecen al apagar el toggle y solo se borran con la accion
 -- "Limpiar clones clonix".
@@ -1101,10 +1101,14 @@ CucurellaClonix.ThreadRunning = false
 CucurellaClonix.Clones = CucurellaClonix.Clones or {}
 CucurellaClonix.MaxTotal = 180
 CucurellaClonix.DefaultRate = 45
-CucurellaClonix.Columns = 15
-CucurellaClonix.SpacingX = 1.8
-CucurellaClonix.SpacingY = 2.0
-CucurellaClonix.StartDistance = 5.0
+
+-- Distribucion alrededor del jugador seleccionado.
+-- Los primeros clones aparecen cerca y los siguientes amplian el circulo.
+CucurellaClonix.MinRadius = 3.0
+CucurellaClonix.MaxRadius = 18.0
+CucurellaClonix.AngleJitterDegrees = 24.0
+CucurellaClonix.RadiusJitter = 1.25
+CucurellaClonix.FaceTarget = true
 
 function CucurellaClonix.Notify(message)
     if TriggerEvent then
@@ -1149,23 +1153,56 @@ end
 
 function CucurellaClonix.GetFormationPosition(targetPed, cloneNumber)
     local coords = GetEntityCoords(targetPed)
-    local heading = GetEntityHeading(targetPed)
-    local zeroIndex = cloneNumber - 1
-    local row = math.floor(zeroIndex / CucurellaClonix.Columns)
-    local column = zeroIndex % CucurellaClonix.Columns
-    local centeredColumn = column - ((CucurellaClonix.Columns - 1) / 2.0)
-    local sideOffset = centeredColumn * CucurellaClonix.SpacingX
-    local backOffset = CucurellaClonix.StartDistance + row * CucurellaClonix.SpacingY
-    local radians = math.rad(heading)
-    local forwardX = -math.sin(radians)
-    local forwardY = math.cos(radians)
-    local rightX = math.cos(radians)
-    local rightY = math.sin(radians)
-    local spawnX = coords.x + rightX * sideOffset - forwardX * backOffset
-    local spawnY = coords.y + rightY * sideOffset - forwardY * backOffset
+
+    -- Angulo aureo: reparte los clones alrededor del jugador y evita filas.
+    -- El pequeno jitter conserva el aspecto irregular del script original.
+    local goldenAngle = 137.507764
+    local jitter = math.random(
+        -math.floor(CucurellaClonix.AngleJitterDegrees),
+         math.floor(CucurellaClonix.AngleJitterDegrees)
+    )
+
+    local angleDegrees = ((cloneNumber - 1) * goldenAngle + jitter) % 360.0
+    local angle = math.rad(angleDegrees)
+
+    -- La raiz cuadrada distribuye los NPC por toda el area circular,
+    -- en lugar de concentrarlos solamente en el borde.
+    local progress = math.sqrt(
+        math.max(0.0, (cloneNumber - 1) / math.max(1, CucurellaClonix.MaxTotal - 1))
+    )
+
+    local radius = CucurellaClonix.MinRadius
+        + (CucurellaClonix.MaxRadius - CucurellaClonix.MinRadius) * progress
+        + (math.random() * 2.0 - 1.0) * CucurellaClonix.RadiusJitter
+
+    radius = math.max(CucurellaClonix.MinRadius, math.min(CucurellaClonix.MaxRadius, radius))
+
+    local spawnX = coords.x + math.cos(angle) * radius
+    local spawnY = coords.y + math.sin(angle) * radius
     local spawnZ = coords.z
-    local foundGround, groundZ = GetGroundZFor_3dCoord(spawnX, spawnY, coords.z + 80.0, false)
-    if foundGround then spawnZ = groundZ + 0.05 end
+
+    local foundGround, groundZ = GetGroundZFor_3dCoord(
+        spawnX,
+        spawnY,
+        coords.z + 80.0,
+        false
+    )
+
+    if foundGround then
+        spawnZ = groundZ + 0.05
+    end
+
+    local heading
+    if CucurellaClonix.FaceTarget then
+        -- Miran hacia el jugador del centro, reforzando el efecto de circulo.
+        heading = GetHeadingFromVector_2d(
+            coords.x - spawnX,
+            coords.y - spawnY
+        )
+    else
+        heading = math.random(0, 359) + 0.0
+    end
+
     return spawnX, spawnY, spawnZ, heading
 end
 
