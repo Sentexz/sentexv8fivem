@@ -165,10 +165,102 @@ end
 
 -- ========== NUEVAS FUNCIONES AÑADIDAS ==========
 
--- Revive para servidores ESX
-local function revivirESX()
-    TriggerEvent('esx_ambulancejob:revive')
-    TriggerEvent('chat:addMessage', {args = {"~g~Reviviendo (ESX)"}})
+-- Revive para servidores ESX.
+-- Sin argumento revive al jugador local; con un server ID usa el mismo flujo
+-- del trabajo de ambulancia: job ambulance, proximidad, medikit y evento servidor.
+local function revivirESX(targetServerId)
+    local myServerId = GetPlayerServerId(PlayerId())
+
+    if not targetServerId or targetServerId == myServerId then
+        TriggerEvent('esx_ambulancejob:revive')
+        TriggerEvent('chat:addMessage', {args = {"~g~Reviviendo (ESX)"}})
+        return
+    end
+
+    local targetPlayer = GetPlayerFromServerId(tonumber(targetServerId))
+    if targetPlayer == nil or targetPlayer == -1 then
+        TriggerEvent('chat:addMessage', {args = {"~r~El jugador seleccionado no está disponible"}})
+        return
+    end
+
+    local targetPed = GetPlayerPed(targetPlayer)
+    if not targetPed or targetPed == 0 or not DoesEntityExist(targetPed) then
+        TriggerEvent('chat:addMessage', {args = {"~r~No se encontró el ped del jugador"}})
+        return
+    end
+
+    local distance = #(GetEntityCoords(PlayerPedId()) - GetEntityCoords(targetPed))
+    if distance > 1.5 then
+        TriggerEvent('chat:addMessage', {args = {"~r~Debes estar junto al jugador para reanimarlo"}})
+        return
+    end
+
+    local ESXObject = rawget(_G, 'ESX')
+    if not ESXObject and exports and exports['es_extended'] then
+        local ok, object = pcall(function()
+            return exports['es_extended']:getSharedObject()
+        end)
+        if ok then ESXObject = object end
+    end
+
+    if not ESXObject then
+        TriggerEvent('chat:addMessage', {args = {"~r~No se pudo obtener ESX"}})
+        return
+    end
+
+    local playerData = ESXObject.GetPlayerData and ESXObject.GetPlayerData() or ESXObject.PlayerData
+    if not playerData or not playerData.job or playerData.job.name ~= 'ambulance' then
+        TriggerEvent('chat:addMessage', {args = {"~r~Necesitas el trabajo ambulance"}})
+        return
+    end
+
+    local isDead = nil
+    pcall(function()
+        isDead = Player(tonumber(targetServerId)).state.isDead
+    end)
+    if isDead == false then
+        TriggerEvent('chat:addMessage', {args = {"~r~El jugador no está inconsciente"}})
+        return
+    end
+
+    if not ESXObject.TriggerServerCallback then
+        TriggerEvent('chat:addMessage', {args = {"~r~Tu versión de ESX no expone TriggerServerCallback"}})
+        return
+    end
+
+    ESXObject.TriggerServerCallback('esx_ambulancejob:getItemAmount', function(quantity)
+        if not quantity or quantity <= 0 then
+            TriggerEvent('chat:addMessage', {args = {"~r~No tienes ningún medikit"}})
+            return
+        end
+
+        Citizen.CreateThread(function()
+            local ped = PlayerPedId()
+            local animDict = 'mini@cpr@char_a@cpr_str'
+            local animName = 'cpr_pumpchest'
+
+            RequestAnimDict(animDict)
+            local timeout = GetGameTimer() + 5000
+            while not HasAnimDictLoaded(animDict) and GetGameTimer() < timeout do
+                Citizen.Wait(10)
+            end
+
+            TriggerEvent('chat:addMessage', {args = {"~g~Reanimación ESX en curso..."}})
+
+            for _ = 1, 15 do
+                if HasAnimDictLoaded(animDict) then
+                    TaskPlayAnim(ped, animDict, animName, 8.0, -8.0, 900, 0, 0.0, false, false, false)
+                end
+                Citizen.Wait(900)
+            end
+
+            ClearPedTasks(ped)
+            RemoveAnimDict(animDict)
+            TriggerServerEvent('esx_ambulancejob:removeItem', 'medikit')
+            TriggerServerEvent('esx_ambulancejob:revive', tonumber(targetServerId))
+            TriggerEvent('chat:addMessage', {args = {"~g~Jugador reanimado mediante ESX"}})
+        end)
+    end, 'medikit')
 end
 
 -- Revive para servidores QB / QBCore / QBX
@@ -3786,6 +3878,19 @@ local function UpdatePlayerList()
                         end
                     end
                     table.insert(tab.items, Actions.teleportItem)
+
+                    Actions.reviveESXSelectedItem = {
+                        name = "Revivir seleccionado (ESX)",
+                        type = "button"
+                    }
+                    Actions.reviveESXSelectedItem.onClick = function()
+                        if not Menu.SelectedPlayer then
+                            TriggerEvent('chat:addMessage', {args = {"~r~Selecciona un jugador de la lista"}})
+                            return
+                        end
+                        revivirESX(Menu.SelectedPlayer)
+                    end
+                    table.insert(tab.items, Actions.reviveESXSelectedItem)
 
                     local localPed = PlayerPedId()
                     if not localPed or localPed == 0 then return end
