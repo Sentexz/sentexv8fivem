@@ -15266,8 +15266,13 @@ local freecam_destroyer_just_started = false
 local destroyer_ui_dirty = false
 local last_click_destroyer = 0
 local last_scroll_destroyer = 0
+local destroyer_scroll_streak = 0
+local destroyer_last_scroll_direction = 0
 local selected_destroyer_opt = 1
 local scroll_offset_destroyer = 0
+local scroll_visual_destroyer = 0.0
+local selected_visual_destroyer = 1.0
+local destroyer_last_draw_time = 0
 
 local d_cam_pos = vector3(0,0,0)
 local d_cam_rot = vector3(0,0,0)
@@ -15482,21 +15487,76 @@ function UpdateDestroyerFreecam()
     end)
 end
 
+local function WrapDestroyerOption(index)
+    local total = #DestroyerOptions
+    if total <= 0 then return 1 end
+    return ((index - 1) % total) + 1
+end
+
+local function MoveDestroyerSelection(direction, accelerated)
+    local now = GetGameTimer()
+    local step = 1
+
+    if accelerated then
+        local interval = last_scroll_destroyer > 0 and (now - last_scroll_destroyer) or 9999
+
+        -- Al cambiar de direccion se reinicia la aceleracion para evitar saltos raros.
+        if direction ~= destroyer_last_scroll_direction then
+            destroyer_scroll_streak = 0
+        elseif interval <= 95 then
+            destroyer_scroll_streak = math.min(9, destroyer_scroll_streak + 1)
+        elseif interval <= 160 then
+            destroyer_scroll_streak = math.min(9, math.max(1, destroyer_scroll_streak))
+        else
+            destroyer_scroll_streak = 0
+        end
+
+        if destroyer_scroll_streak >= 7 then
+            step = 4
+        elseif destroyer_scroll_streak >= 4 then
+            step = 3
+        elseif destroyer_scroll_streak >= 2 then
+            step = 2
+        end
+    else
+        destroyer_scroll_streak = 0
+    end
+
+    local previous = selected_destroyer_opt
+    selected_destroyer_opt = WrapDestroyerOption(selected_destroyer_opt + (direction * step))
+
+    -- Al envolver de la ultima opcion a la primera (o al reves) se evita que
+    -- el resaltado recorra toda la lista visualmente.
+    if math.abs(selected_destroyer_opt - previous) > (#DestroyerOptions * 0.5) then
+        selected_visual_destroyer = selected_destroyer_opt
+    end
+
+    destroyer_last_scroll_direction = direction
+    last_scroll_destroyer = now
+end
+
 function HandleDestroyerInput()
     if not freecam_destroyer_active then return end
     local time = GetGameTimer()
 
-    -- Rueda del raton FiveM + fallback flechas Susano.
-    if (IsDisabledControlJustPressed(0, 241) or SusanoJustPressed(VK_UP)) and (time - last_scroll_destroyer) > 100 then
-        selected_destroyer_opt = selected_destroyer_opt - 1
-        if selected_destroyer_opt < 1 then selected_destroyer_opt = #DestroyerOptions end
-        last_scroll_destroyer = time
+    -- La racha se pierde rapidamente al dejar de mover la rueda.
+    if last_scroll_destroyer > 0 and (time - last_scroll_destroyer) > 240 then
+        destroyer_scroll_streak = 0
     end
 
-    if (IsDisabledControlJustPressed(0, 242) or SusanoJustPressed(VK_DOWN)) and (time - last_scroll_destroyer) > 100 then
-        selected_destroyer_opt = selected_destroyer_opt + 1
-        if selected_destroyer_opt > #DestroyerOptions then selected_destroyer_opt = 1 end
-        last_scroll_destroyer = time
+    local wheelUp = IsDisabledControlJustPressed(0, 241) or IsControlJustPressed(0, 241)
+    local wheelDown = IsDisabledControlJustPressed(0, 242) or IsControlJustPressed(0, 242)
+    local keyUp = SusanoJustPressed(VK_UP)
+    local keyDown = SusanoJustPressed(VK_DOWN)
+
+    if wheelUp then
+        MoveDestroyerSelection(-1, true)
+    elseif wheelDown then
+        MoveDestroyerSelection(1, true)
+    elseif keyUp then
+        MoveDestroyerSelection(-1, false)
+    elseif keyDown then
+        MoveDestroyerSelection(1, false)
     end
 
     local click = IsDisabledControlJustPressed(0, 24) or SusanoJustPressed(VK_LBUTTON)
@@ -15544,16 +15604,44 @@ function DrawDestroyerFreecamMenu()
     local options = DestroyerOptions
     local totalOptions = #options
     local maxVis = math.min(9, totalOptions)
+    local maxOffset = math.max(0, totalOptions - maxVis)
 
-    -- Mantiene siempre la opcion seleccionada dentro de la ventana visible.
-    if selected_destroyer_opt <= scroll_offset_destroyer then
-        scroll_offset_destroyer = math.max(0, selected_destroyer_opt - 1)
-    elseif selected_destroyer_opt > scroll_offset_destroyer + maxVis then
-        scroll_offset_destroyer = selected_destroyer_opt - maxVis
+    -- Mantiene la opcion seleccionada cerca del centro. La posicion real del
+    -- listado se interpola mas abajo para que no haya saltos entre filas.
+    local centerRow = math.ceil(maxVis / 2)
+    local desiredOffset = selected_destroyer_opt - centerRow
+    scroll_offset_destroyer = math.max(0, math.min(desiredOffset, maxOffset))
+
+    local now = GetGameTimer()
+    local dt = 0.016
+    if destroyer_last_draw_time > 0 then
+        dt = math.max(0.001, math.min(0.050, (now - destroyer_last_draw_time) / 1000.0))
+    end
+    destroyer_last_draw_time = now
+
+    -- Interpolacion exponencial independiente de los FPS. Cuando el usuario
+    -- acelera la rueda, aumenta ligeramente la respuesta sin perder suavidad.
+    local scrollDistance = math.abs(scroll_offset_destroyer - scroll_visual_destroyer)
+    local scrollSpeed = 16.0 + math.min(24.0, scrollDistance * 5.0)
+    local scrollBlend = 1.0 - math.exp(-scrollSpeed * dt)
+    scroll_visual_destroyer = scroll_visual_destroyer + ((scroll_offset_destroyer - scroll_visual_destroyer) * scrollBlend)
+
+    if math.abs(scroll_offset_destroyer - scroll_visual_destroyer) < 0.001 then
+        scroll_visual_destroyer = scroll_offset_destroyer
     end
 
-    local maxOffset = math.max(0, totalOptions - maxVis)
-    scroll_offset_destroyer = math.max(0, math.min(scroll_offset_destroyer, maxOffset))
+    local selectedDistance = math.abs(selected_destroyer_opt - selected_visual_destroyer)
+    if selectedDistance > (totalOptions * 0.5) then
+        selected_visual_destroyer = selected_destroyer_opt
+    else
+        local selectedSpeed = 22.0 + math.min(30.0, selectedDistance * 8.0)
+        local selectedBlend = 1.0 - math.exp(-selectedSpeed * dt)
+        selected_visual_destroyer = selected_visual_destroyer + ((selected_destroyer_opt - selected_visual_destroyer) * selectedBlend)
+    end
+
+    if math.abs(selected_destroyer_opt - selected_visual_destroyer) < 0.001 then
+        selected_visual_destroyer = selected_destroyer_opt
+    end
 
     local cyanR, cyanG, cyanB = 0.0, 0.85, 1.0
     local textR, textG, textB = 0.88, 0.91, 0.95
@@ -15567,20 +15655,18 @@ function DrawDestroyerFreecamMenu()
     local listTopPadding = 9.0
     local bottomPadding = 11.0
 
-    -- Calcula un ancho suficiente para los textos visibles.
+    -- Usa el texto mas ancho de toda la lista para que el panel tampoco cambie
+    -- de anchura al desplazarse rapidamente.
     local maxTextWidth = 0.0
-    for i = 1, maxVis do
-        local idx = scroll_offset_destroyer + i
-        if idx <= totalOptions then
-            local label = tostring(options[idx])
-            local width = 0.0
-            if Susano.GetTextWidth then
-                local ok, measured = pcall(Susano.GetTextWidth, label, normalSize)
-                if ok and measured then width = measured end
-            end
-            if width <= 0.0 then width = #label * 8.5 end
-            if width > maxTextWidth then maxTextWidth = width end
+    for i = 1, totalOptions do
+        local label = tostring(options[i])
+        local width = 0.0
+        if Susano.GetTextWidth then
+            local ok, measured = pcall(Susano.GetTextWidth, label, normalSize)
+            if ok and measured then width = measured end
         end
+        if width <= 0.0 then width = #label * 8.5 end
+        if width > maxTextWidth then maxTextWidth = width end
     end
 
     local panelWidth = math.max(350.0, math.min(590.0, maxTextWidth + (sidePadding * 2.0) + 28.0))
@@ -15588,13 +15674,9 @@ function DrawDestroyerFreecamMenu()
     local panelHeight = headerHeight + listTopPadding + listHeight + bottomPadding
 
     local panelX = (sw - panelWidth) / 2.0
-    -- El panel queda algo por debajo del centro, pero las nueve filas caben enteras.
     local panelY = math.max(24.0, (sh * 0.55) - (panelHeight / 2.0))
 
-    -- Fondo transparente para seguir viendo el juego.
     DrawFilledRect(panelX, panelY, panelWidth, panelHeight, 0.0, 0.0, 0.0, 0.40)
-
-    -- Marco cyan fino.
     DrawFilledRect(panelX, panelY, panelWidth, 1.0, cyanR, cyanG, cyanB, 0.82)
     DrawFilledRect(panelX, panelY + panelHeight - 1.0, panelWidth, 1.0, cyanR, cyanG, cyanB, 0.55)
     DrawFilledRect(panelX, panelY, 1.0, panelHeight, cyanR, cyanG, cyanB, 0.55)
@@ -15612,36 +15694,54 @@ function DrawDestroyerFreecamMenu()
     Susano.DrawText(panelX + panelWidth - sidePadding - indicatorWidth, panelY + 11.0, indicator, 14.0, mutedR, mutedG, mutedB, 1.0)
 
     local listStartY = panelY + headerHeight + listTopPadding
+    local listEndY = listStartY + listHeight
     local textX = panelX + sidePadding
 
-    for i = 1, maxVis do
-        local idx = scroll_offset_destroyer + i
-        if idx <= totalOptions then
+    -- El resaltado se mueve con interpolacion, en lugar de saltar de fila.
+    local highlightY = listStartY + (((selected_visual_destroyer - 1.0) - scroll_visual_destroyer) * rowHeight)
+    if highlightY > (listStartY - rowHeight) and highlightY < listEndY then
+        DrawFilledRect(panelX + 7.0, highlightY - 3.0, panelWidth - 14.0, rowHeight - 2.0, cyanR, cyanG, cyanB, 0.14)
+        DrawFilledRect(panelX + 7.0, highlightY - 3.0, 3.0, rowHeight - 2.0, cyanR, cyanG, cyanB, 0.95)
+    end
+
+    -- Se dibuja una fila adicional para que la entrada y salida de opciones sea
+    -- continua mientras la ventana visual se desplaza entre dos offsets.
+    local firstIndex = math.max(1, math.floor(scroll_visual_destroyer) + 1)
+    local lastIndex = math.min(totalOptions, firstIndex + maxVis)
+
+    for idx = firstIndex, lastIndex do
+        local rowY = listStartY + (((idx - 1.0) - scroll_visual_destroyer) * rowHeight)
+
+        -- Solo se muestran filas cuyo punto de texto permanece dentro del area.
+        if rowY >= (listStartY - 1.0) and rowY <= (listEndY - 1.0) then
             local isSelected = idx == selected_destroyer_opt
-            local rowY = listStartY + ((i - 1) * rowHeight)
             local r, g, b = textR, textG, textB
             local size = normalSize
+            local alpha = 1.0
+
+            -- La fila que entra por abajo aparece progresivamente.
+            if rowY > (listEndY - rowHeight) then
+                alpha = math.max(0.15, math.min(1.0, (listEndY - rowY) / rowHeight))
+            end
 
             if isSelected then
                 r, g, b = cyanR, cyanG, cyanB
                 size = selectedSize
-                DrawFilledRect(panelX + 7.0, rowY - 3.0, panelWidth - 14.0, rowHeight - 2.0, cyanR, cyanG, cyanB, 0.14)
-                DrawFilledRect(panelX + 7.0, rowY - 3.0, 3.0, rowHeight - 2.0, cyanR, cyanG, cyanB, 0.95)
+                alpha = 1.0
             end
 
-            -- Sombra ligera para que el texto se lea sobre cualquier fondo.
-            Susano.DrawText(textX + 1.0, rowY + 1.0, options[idx], size, 0.0, 0.0, 0.0, 0.72)
-            Susano.DrawText(textX, rowY, options[idx], size, r, g, b, 1.0)
+            Susano.DrawText(textX + 1.0, rowY + 1.0, options[idx], size, 0.0, 0.0, 0.0, 0.72 * alpha)
+            Susano.DrawText(textX, rowY, options[idx], size, r, g, b, alpha)
         end
     end
 
-    -- Barra de desplazamiento lateral.
+    -- La barra lateral tambien usa el offset interpolado.
     if totalOptions > maxVis then
         local trackX = panelX + panelWidth - 10.0
         local trackY = listStartY - 1.0
         local trackHeight = listHeight - 5.0
         local thumbHeight = math.max(28.0, trackHeight * (maxVis / totalOptions))
-        local progress = maxOffset > 0 and (scroll_offset_destroyer / maxOffset) or 0.0
+        local progress = maxOffset > 0 and (scroll_visual_destroyer / maxOffset) or 0.0
         local thumbY = trackY + ((trackHeight - thumbHeight) * progress)
 
         DrawFilledRect(trackX, trackY, 2.0, trackHeight, mutedR, mutedG, mutedB, 0.22)
@@ -15671,6 +15771,12 @@ function ToggleFreecamDestroyer(enable, speed)
         destroyer_ui_dirty = true
         selected_destroyer_opt = 1
         scroll_offset_destroyer = 0
+        scroll_visual_destroyer = 0.0
+        selected_visual_destroyer = 1.0
+        destroyer_scroll_streak = 0
+        destroyer_last_scroll_direction = 0
+        last_scroll_destroyer = 0
+        destroyer_last_draw_time = 0
 
         local pos = GetEntityCoords(ped)
         d_cam_pos = vector3(pos.x, pos.y, pos.z + 1.0)
