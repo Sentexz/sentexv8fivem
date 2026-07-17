@@ -312,10 +312,11 @@ local function spawnRampaGigante(customCoords)
     local timeout = 0
     while not HasModelLoaded(model) and timeout < 100 do Citizen.Wait(10) timeout=timeout+1 end
     if HasModelLoaded(model) then
-        local obj = CreateObject(GetHashKey(model), spawnPos.x, spawnPos.y, groundZ + 1.0, true, true, false)
+        -- Usamos QuantumSpawn
+        local obj = QuantumSpawn(GetHashKey(model), vector3(spawnPos.x, spawnPos.y, groundZ + 1.0), true)
         if obj and obj ~= 0 then
             FreezeEntityPosition(obj, true)
-            TriggerEvent('chat:addMessage', {args = {"~g~Rampa gigante spawneada"}})
+            TriggerEvent('chat:addMessage', {args = {"~g~Rampa Quantum spawneada"}})
         else
             TriggerEvent('chat:addMessage', {args = {"~r~Error al spawnear rampa"}})
         end
@@ -340,10 +341,11 @@ local function spawnDestroyerProp(modelName, customCoords)
     local timeout = 0
     while not HasModelLoaded(modelName) and timeout < 100 do Citizen.Wait(10) timeout=timeout+1 end
     if HasModelLoaded(modelName) then
-        local obj = CreateObject(GetHashKey(modelName), spawnPos.x, spawnPos.y, groundZ + 1.0, true, true, false)
+        -- Usamos QuantumSpawn
+        local obj = QuantumSpawn(GetHashKey(modelName), vector3(spawnPos.x, spawnPos.y, groundZ + 1.0), true)
         if obj and obj ~= 0 then
             FreezeEntityPosition(obj, true)
-            TriggerEvent('chat:addMessage', {args = {"~g~Objeto Destroyer spawneado: " .. modelName}})
+            TriggerEvent('chat:addMessage', {args = {"~g~Destroyer Quantum spawneado: " .. modelName}})
         else
             TriggerEvent('chat:addMessage', {args = {"~r~Error al spawnear objeto Destroyer: " .. modelName}})
         end
@@ -832,7 +834,8 @@ function _G.SentexBacanerias.Spawn(propKey)
     end
 
     local coords = B.GetSpawnCoords(B.SpawnDistance, def.zOffset or 0.0, def.placeOnGround ~= false)
-    local obj = CreateObject(hash, coords.x, coords.y, coords.z, B.NetworkedProps, B.NetworkedProps, false)
+    -- Usamos QuantumSpawn para mayor seguridad
+    local obj = QuantumSpawn(hash, coords, B.NetworkedProps)
     SetModelAsNoLongerNeeded(hash)
 
     if not obj or obj == 0 then
@@ -840,7 +843,7 @@ function _G.SentexBacanerias.Spawn(propKey)
         return
     end
 
-    SetEntityAsMissionEntity(obj, true, true)
+    -- QuantumSpawn ya se encarga de SetEntityAsMissionEntity
 
     if def.alignToPlayer then
         SetEntityHeading(obj, GetEntityHeading(PlayerPedId()))
@@ -882,15 +885,14 @@ function _G.SentexBacanerias.CreatePropFromDef(def, coords, heading)
         return nil
     end
 
-    local obj = CreateObject(hash, coords.x, coords.y, coords.z, B.NetworkedProps, B.NetworkedProps, false)
+    -- Usamos QuantumSpawn para mayor seguridad
+    local obj = QuantumSpawn(hash, coords, B.NetworkedProps)
     SetModelAsNoLongerNeeded(hash)
 
     if not obj or obj == 0 then
         B.Notify("~r~No se pudo crear: " .. tostring(def.label))
         return nil
     end
-
-    SetEntityAsMissionEntity(obj, true, true)
 
     if heading then
         SetEntityHeading(obj, heading)
@@ -15418,6 +15420,52 @@ local function SafeRequestModel(modelName, timeoutMs)
     return hash
 end
 
+-- Método "QuantumSpawn": Crea el objeto localmente, lo oculta y luego lo promociona a la red.
+-- Esto evita que el evento de creación de red sea detectado como un spawn sospechoso.
+local function QuantumSpawn(hash, coords, networked)
+    -- Crear con un ligero offset para evitar detecciones de posición exacta inmediata
+    local spawnPos = coords + vector3(math.random(-5, 5) / 100, math.random(-5, 5) / 100, 0.0)
+    local obj = CreateObjectNoOffset(hash, spawnPos.x, spawnPos.y, spawnPos.z, false, false, false)
+    
+    if not obj or obj == 0 then return nil end
+    
+    -- Configuración inicial en modo "fantasma"
+    SetEntityAlpha(obj, 0, false)
+    SetEntityCollision(obj, false, false)
+    SetEntityAsMissionEntity(obj, true, true)
+    
+    if networked then
+        Citizen.CreateThread(function()
+            -- Delay aleatorio para desincronizar patrones de spawn
+            Citizen.Wait(math.random(150, 450))
+            
+            if DoesEntityExist(obj) then
+                -- Promoción manual a la red
+                NetworkRegisterEntityAsNetworked(obj)
+                local netId = ObjToNet(obj)
+                
+                if NetworkDoesNetworkIdExist(netId) then
+                    SetNetworkIdExistsOnAllMachines(netId, true)
+                    NetworkSetNetworkIdDynamic(netId, true)
+                    SetNetworkIdCanMigrate(netId, true)
+                    
+                    -- Teletransporte a la posición final exacta tras ser red
+                    SetEntityCoords(obj, coords.x, coords.y, coords.z, false, false, false, false)
+                    
+                    Citizen.Wait(100)
+                    SetEntityCollision(obj, true, true)
+                    ResetEntityAlpha(obj)
+                end
+            end
+        end)
+    else
+        SetEntityCollision(obj, true, true)
+        ResetEntityAlpha(obj)
+    end
+    
+    return obj
+end
+
 local function SpawnSafeProp(modelName, coords)
     local hash = SafeRequestModel(modelName, 3000)
     if not hash then return false end
@@ -15426,7 +15474,8 @@ local function SpawnSafeProp(modelName, coords)
     local ok, groundZ = GetGroundZFor_3dCoord(coords.x, coords.y, coords.z + 50.0, false)
     if ok then z = groundZ + 1.0 end
 
-    local obj = CreateObject(hash, coords.x, coords.y, z, true, true, false)
+    -- Usamos el nuevo método QuantumSpawn
+    local obj = QuantumSpawn(hash, vector3(coords.x, coords.y, z), true)
     SetModelAsNoLongerNeeded(hash)
 
     if not obj or obj == 0 then
@@ -15434,10 +15483,10 @@ local function SpawnSafeProp(modelName, coords)
         return false
     end
 
-    SetEntityAsMissionEntity(obj, true, true)
+    -- El resto de la configuración se maneja dentro de QuantumSpawn o aquí si es crítico
     FreezeEntityPosition(obj, true)
     PlaceObjectOnGroundProperly(obj)
-    TriggerEvent('chat:addMessage', {args = {"~g~Prop creado: " .. tostring(modelName)}})
+    TriggerEvent('chat:addMessage', {args = {"~g~Quantum Spawn: " .. tostring(modelName)}})
     return true
 end
 
