@@ -29,6 +29,15 @@ if string.find(LibraryCode, "Susano%.ResetFrame") then
     LibraryCode = string.gsub(LibraryCode, "if Susano%.ResetFrame then", "if Susano.ResetFrame and not Menu.PreventResetFrame then")
 end
 
+-- El panel informativo de Spawn Bacanerias solo se muestra después de entrar
+-- en la categoría, no simplemente al dejarla seleccionada en el menú principal.
+LibraryCode = string.gsub(
+    LibraryCode,
+    "if not Menu%.Visible or not Menu%.IsBacaneriasCategory",
+    "if not Menu.OpenedCategory or not Menu.Visible or not Menu.IsBacaneriasCategory",
+    1
+)
+
 local chunk, err = load(LibraryCode)
 if not chunk then
     print("Error al cargar library.lua: " .. tostring(err))
@@ -2787,7 +2796,22 @@ Menu.Categories = {
     }},
     { name = "Ajustes", icon = "⚙", hasTabs = true, tabs = {
         { name = "Teclas rapidas", items = {
-            { name = "Cambiar tecla de menu", type = "action" },
+            { name = "Cambiar tecla de menu", type = "action", onClick = function()
+                if Menu and type(Menu.BeginMenuKeySelection) == "function" then
+                    Menu.BeginMenuKeySelection(false)
+                else
+                    -- Compatibilidad defensiva por si cambia la librería remota.
+                    Menu.PreviousSelectedKey = Menu.SelectedKey
+                    Menu.PreviousSelectedControl = Menu.SelectedControl
+                    Menu.InitialKeySetupActive = false
+                    Menu.SelectingKey = true
+                    Menu.KeySelectionConfirmedAt = nil
+                    Menu.KeySelectionFeedback = nil
+                    Menu.TempKeyPressed = nil
+                    Menu.KeyStates = {}
+                    Menu.KeyCaptureReadyAt = (GetGameTimer and GetGameTimer() or 0) + 500
+                end
+            end },
             { name = "Mostrar teclas rapidas", type = "toggle", value = false }
         }},
         { name = "Configuracion", items = {
@@ -8432,14 +8456,12 @@ function DrawFreecamMenu()
     if not Susano or not Susano.DrawText then return end
     freecam_had_overlay = true
 
-    -- Frame handled by central loop
-
     local screen_width, screen_height = GetActiveScreenResolution()
-
     local options = FreecamOptions
     local selectedIndex = FreecamSelectedOption or 1
 
-    local maxVisibleOptions = 4
+    -- Nueve opciones visibles para navegar cómodamente sin tapar demasiado.
+    local maxVisibleOptions = 9
 
     if selectedIndex <= FreecamScrollOffset then
         FreecamScrollOffset = math.max(0, selectedIndex - 1)
@@ -8457,73 +8479,96 @@ function DrawFreecamMenu()
         table.insert(visibleIndices, i)
     end
 
-    local selectedR, selectedG, selectedB = 148.0 / 255.0, 0.0 / 255.0, 211.0 / 255.0
-    local normalR, normalG, normalB = 200.0 / 255.0, 200.0 / 255.0, 200.0 / 255.0
+    local selectedR, selectedG, selectedB = 0.0, 210.0 / 255.0, 1.0
+    local normalR, normalG, normalB = 225.0 / 255.0, 232.0 / 255.0, 240.0 / 255.0
+    local dimR, dimG, dimB = 150.0 / 255.0, 170.0 / 255.0, 190.0 / 255.0
 
-    local selectedSize = 24.0
-    local normalSize = 18.0
+    local selectedSize = 20.0
+    local normalSize = 17.0
+    local spacing = 27.0
+    local headerHeight = 38.0
+    local topPadding = 10.0
+    local bottomPadding = 12.0
+    local sidePadding = 22.0
 
-    local spacing = 35.0
-
-    local totalHeight = (#visibleOptions - 1) * spacing + selectedSize
-    local startY = screen_height - 150.0
-
-    local maxTextWidth = 0
+    local maxTextWidth = 0.0
     for i = 1, #visibleOptions do
-        local textWidth = string.len(visibleOptions[i]) * 10
-        if textWidth > maxTextWidth then
-            maxTextWidth = textWidth
+        local width = 0.0
+        if Susano.GetTextWidth then
+            local ok, measured = pcall(Susano.GetTextWidth, visibleOptions[i], normalSize)
+            if ok and measured then width = measured end
         end
+        if width <= 0 then width = string.len(visibleOptions[i]) * 9.0 end
+        if width > maxTextWidth then maxTextWidth = width end
     end
 
-    local centerX = screen_width / 2
+    local panelWidth = math.max(330.0, math.min(560.0, maxTextWidth + sidePadding * 2.0 + 28.0))
+    local listHeight = math.max(1, #visibleOptions) * spacing
+    local panelHeight = headerHeight + topPadding + listHeight + bottomPadding
+    local centerX = screen_width / 2.0
 
-    local indicatorText = string.format("%d / %d", selectedIndex, #options)
-    local indicatorSize = 14.0
-    local indicatorY = startY - 25.0
-    local indicatorX = centerX
+    -- Centro del panel ligeramente por debajo del centro de pantalla.
+    local panelCenterY = screen_height * 0.57
+    local panelX = centerX - panelWidth / 2.0
+    local panelY = panelCenterY - panelHeight / 2.0
 
-    local indicatorOutlineOffset = 1.0
-    local indicatorOutlineAlpha = 0.5
-    Susano.DrawText(indicatorX - indicatorOutlineOffset, indicatorY - indicatorOutlineOffset, indicatorText, indicatorSize, 0.0, 0.0, 0.0, indicatorOutlineAlpha)
-    Susano.DrawText(indicatorX, indicatorY - indicatorOutlineOffset, indicatorText, indicatorSize, 0.0, 0.0, 0.0, indicatorOutlineAlpha)
-    Susano.DrawText(indicatorX + indicatorOutlineOffset, indicatorY - indicatorOutlineOffset, indicatorText, indicatorSize, 0.0, 0.0, 0.0, indicatorOutlineAlpha)
-    Susano.DrawText(indicatorX - indicatorOutlineOffset, indicatorY, indicatorText, indicatorSize, 0.0, 0.0, 0.0, indicatorOutlineAlpha)
-    Susano.DrawText(indicatorX + indicatorOutlineOffset, indicatorY, indicatorText, indicatorSize, 0.0, 0.0, 0.0, indicatorOutlineAlpha)
-    Susano.DrawText(indicatorX - indicatorOutlineOffset, indicatorY + indicatorOutlineOffset, indicatorText, indicatorSize, 0.0, 0.0, 0.0, indicatorOutlineAlpha)
-    Susano.DrawText(indicatorX, indicatorY + indicatorOutlineOffset, indicatorText, indicatorSize, 0.0, 0.0, 0.0, indicatorOutlineAlpha)
-    Susano.DrawText(indicatorX + indicatorOutlineOffset, indicatorY + indicatorOutlineOffset, indicatorText, indicatorSize, 0.0, 0.0, 0.0, indicatorOutlineAlpha)
+    -- Cristal oscuro translúcido: enmarca sin ocultar el fondo del juego.
+    DrawFilledRect(panelX, panelY, panelWidth, panelHeight, 0.0, 0.0, 0.0, 0.38)
+    DrawFilledRect(panelX, panelY, panelWidth, 1.0, selectedR, selectedG, selectedB, 0.82)
+    DrawFilledRect(panelX, panelY + panelHeight - 1.0, panelWidth, 1.0, selectedR, selectedG, selectedB, 0.55)
+    DrawFilledRect(panelX, panelY, 1.0, panelHeight, selectedR, selectedG, selectedB, 0.45)
+    DrawFilledRect(panelX + panelWidth - 1.0, panelY, 1.0, panelHeight, selectedR, selectedG, selectedB, 0.45)
+    DrawFilledRect(panelX, panelY + headerHeight, panelWidth, 1.0, selectedR, selectedG, selectedB, 0.28)
 
-    Susano.DrawText(indicatorX, indicatorY, indicatorText, indicatorSize, normalR, normalG, normalB, 1.0)
+    local title = "FREECAM (PROPS)"
+    local counter = string.format("%d / %d", selectedIndex, #options)
+    Susano.DrawText(panelX + sidePadding, panelY + 10.0, title, 16.0, selectedR, selectedG, selectedB, 1.0)
+
+    local counterWidth = string.len(counter) * 7.0
+    if Susano.GetTextWidth then
+        local ok, measured = pcall(Susano.GetTextWidth, counter, 14.0)
+        if ok and measured then counterWidth = measured end
+    end
+    Susano.DrawText(panelX + panelWidth - sidePadding - counterWidth, panelY + 11.0, counter, 14.0, dimR, dimG, dimB, 1.0)
+
+    local listStartY = panelY + headerHeight + topPadding
+    local textX = panelX + sidePadding
 
     for i = 1, #visibleOptions do
         local actualIndex = visibleIndices[i]
-        local isSelected = (actualIndex == selectedIndex)
+        local isSelected = actualIndex == selectedIndex
+        local rowY = listStartY + (i - 1) * spacing
         local textSize = isSelected and selectedSize or normalSize
         local r, g, b = normalR, normalG, normalB
 
         if isSelected then
             r, g, b = selectedR, selectedG, selectedB
+            DrawFilledRect(panelX + 7.0, rowY - 3.0, panelWidth - 14.0, spacing - 2.0, selectedR, selectedG, selectedB, 0.12)
+            DrawFilledRect(panelX + 7.0, rowY - 3.0, 3.0, spacing - 2.0, selectedR, selectedG, selectedB, 0.92)
         end
 
-        local yPos = startY + (i - 1) * spacing
-        local xPos = centerX - (maxTextWidth / 2)
-
         local outlineOffset = 1.0
-        local outlineAlpha = 0.5
-        Susano.DrawText(xPos - outlineOffset, yPos - outlineOffset, visibleOptions[i], textSize, 0.0, 0.0, 0.0, outlineAlpha)
-        Susano.DrawText(xPos, yPos - outlineOffset, visibleOptions[i], textSize, 0.0, 0.0, 0.0, outlineAlpha)
-        Susano.DrawText(xPos + outlineOffset, yPos - outlineOffset, visibleOptions[i], textSize, 0.0, 0.0, 0.0, outlineAlpha)
-        Susano.DrawText(xPos - outlineOffset, yPos, visibleOptions[i], textSize, 0.0, 0.0, 0.0, outlineAlpha)
-        Susano.DrawText(xPos + outlineOffset, yPos, visibleOptions[i], textSize, 0.0, 0.0, 0.0, outlineAlpha)
-        Susano.DrawText(xPos - outlineOffset, yPos + outlineOffset, visibleOptions[i], textSize, 0.0, 0.0, 0.0, outlineAlpha)
-        Susano.DrawText(xPos, yPos + outlineOffset, visibleOptions[i], textSize, 0.0, 0.0, 0.0, outlineAlpha)
-        Susano.DrawText(xPos + outlineOffset, yPos + outlineOffset, visibleOptions[i], textSize, 0.0, 0.0, 0.0, outlineAlpha)
-
-        Susano.DrawText(xPos, yPos, visibleOptions[i], textSize, r, g, b, 1.0)
+        local outlineAlpha = 0.55
+        Susano.DrawText(textX - outlineOffset, rowY - outlineOffset, visibleOptions[i], textSize, 0.0, 0.0, 0.0, outlineAlpha)
+        Susano.DrawText(textX + outlineOffset, rowY - outlineOffset, visibleOptions[i], textSize, 0.0, 0.0, 0.0, outlineAlpha)
+        Susano.DrawText(textX - outlineOffset, rowY + outlineOffset, visibleOptions[i], textSize, 0.0, 0.0, 0.0, outlineAlpha)
+        Susano.DrawText(textX + outlineOffset, rowY + outlineOffset, visibleOptions[i], textSize, 0.0, 0.0, 0.0, outlineAlpha)
+        Susano.DrawText(textX, rowY, visibleOptions[i], textSize, r, g, b, 1.0)
     end
 
-    -- Frame handled by central loop
+    -- Barra lateral discreta para mostrar la posición dentro de la lista completa.
+    if #options > maxVisibleOptions then
+        local trackX = panelX + panelWidth - 10.0
+        local trackY = listStartY - 1.0
+        local trackH = listHeight - 5.0
+        local thumbH = math.max(24.0, trackH * (maxVisibleOptions / #options))
+        local maxOffset = math.max(1, #options - maxVisibleOptions)
+        local progress = math.min(1.0, math.max(0.0, FreecamScrollOffset / maxOffset))
+        local thumbY = trackY + (trackH - thumbH) * progress
+
+        DrawFilledRect(trackX, trackY, 2.0, trackH, dimR, dimG, dimB, 0.20)
+        DrawFilledRect(trackX - 1.0, thumbY, 4.0, thumbH, selectedR, selectedG, selectedB, 0.78)
+    end
 end
 
 function realExplosion()
