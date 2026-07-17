@@ -353,7 +353,11 @@ _G.SentexBacanerias.SpawnedProps = _G.SentexBacanerias.SpawnedProps or {}
 _G.SentexBacanerias.MaxProps = nil
 _G.SentexBacanerias.SpawnDistance = _G.SentexBacanerias.SpawnDistance or 45.0
 _G.SentexBacanerias.FreezeProps = _G.SentexBacanerias.FreezeProps ~= false
-_G.SentexBacanerias.NetworkedProps = _G.SentexBacanerias.NetworkedProps == true -- Local por defecto.
+if _G.SentexBacanerias.NetworkedProps == nil then
+    _G.SentexBacanerias.NetworkedProps = true -- Servidor por defecto.
+else
+    _G.SentexBacanerias.NetworkedProps = _G.SentexBacanerias.NetworkedProps == true
+end
 
 _G.SentexBacanerias.PropDefs = _G.SentexBacanerias.PropDefs or {
     -- Rampas / parkour
@@ -903,7 +907,7 @@ function _G.SentexBacanerias.OffsetFromHeading(base, heading, x, y, z)
     return vector3(base.x + ox, base.y + oy, base.z + (z or 0.0))
 end
 
-function _G.SentexBacanerias.SpawnPreset(presetKey)
+function _G.SentexBacanerias.SpawnPreset(presetKey, customBase, customHeading)
     local B = _G.SentexBacanerias
     local preset = B.Presets[presetKey]
     if not preset or not preset.items then
@@ -917,8 +921,8 @@ function _G.SentexBacanerias.SpawnPreset(presetKey)
         return
     end
 
-    local base = B.GetSpawnCoords(B.SpawnDistance, 0.0, true)
-    local playerHeading = GetEntityHeading(PlayerPedId())
+    local base = customBase or B.GetSpawnCoords(B.SpawnDistance, 0.0, true)
+    local playerHeading = customHeading or GetEntityHeading(PlayerPedId())
     local created = 0
 
     for _, item in ipairs(preset.items) do
@@ -2512,136 +2516,6 @@ local function WrapWithVehicleHooks(code)
 end
 
 
--- ========== SONIDOS LOCALES + AYUDA DE MICROFONO ==========
--- El audio se reproduce en este cliente. Para que otros jugadores cercanos lo
--- escuchen por voz, el audio del juego debe estar enrutado al microfono mediante
--- Mezcla estereo o un cable de audio virtual.
-_G.SentexSonidos = _G.SentexSonidos or {}
-_G.SentexSonidos.MicroActivo = _G.SentexSonidos.MicroActivo == true
-_G.SentexSonidos.MicroPersistente = _G.SentexSonidos.MicroPersistente == true
-_G.SentexSonidos.RadioActiva = false
-_G.SentexSonidos.RadioActual = nil
-
-function _G.SentexSonidos.Notify(message)
-    if TriggerEvent then
-        TriggerEvent('chat:addMessage', {args = {"~b~Sonidos: ~s~" .. tostring(message)}})
-    else
-        print("[Sonidos] " .. tostring(message))
-    end
-end
-
-function _G.SentexSonidos.SetMicro(value)
-    local S = _G.SentexSonidos
-    S.MicroActivo = value == true
-
-    if ExecuteCommand then
-        if S.MicroActivo then
-            ExecuteCommand("+voicerecord")
-            S.Notify("Microfono activado. Requiere Mezcla estereo o cable virtual para transmitir el audio del juego.")
-        else
-            ExecuteCommand("-voicerecord")
-            S.Notify("Microfono desactivado.")
-        end
-    end
-end
-
-function _G.SentexSonidos.SetMicroPersistente(value)
-    local S = _G.SentexSonidos
-    S.MicroPersistente = value == true
-
-    if not S.MicroPersistente and S.MicroActivo then
-        S.SetMicro(false)
-    end
-end
-
-function _G.SentexSonidos.BeginTransmission()
-    local S = _G.SentexSonidos
-    if S.MicroPersistente and not S.MicroActivo then
-        S.SetMicro(true)
-    end
-end
-
-function _G.SentexSonidos.EndTransmission()
-    local S = _G.SentexSonidos
-    if not S.MicroPersistente and S.MicroActivo then
-        S.SetMicro(false)
-    end
-end
-
-function _G.SentexSonidos.PlayFrontend(soundName, soundSet, repeats, delayMs)
-    local S = _G.SentexSonidos
-    repeats = math.max(1, math.min(30, tonumber(repeats) or 1))
-    delayMs = math.max(50, tonumber(delayMs) or 350)
-
-    CreateThread(function()
-        S.BeginTransmission()
-
-        for i = 1, repeats do
-            PlaySoundFrontend(-1, tostring(soundName), tostring(soundSet), true)
-            if i < repeats then
-                Wait(delayMs)
-            end
-        end
-
-        Wait(450)
-        S.EndTransmission()
-    end)
-end
-
-function _G.SentexSonidos.StartRadio(stationName, label)
-    local S = _G.SentexSonidos
-    stationName = tostring(stationName or "")
-
-    if stationName == "" then
-        S.Notify("Emisora no valida.")
-        return
-    end
-
-    if SetMobileRadioEnabledDuringGameplay then
-        SetMobileRadioEnabledDuringGameplay(true)
-    end
-    if SetFrontendRadioActive then
-        SetFrontendRadioActive(true)
-    end
-    if SetRadioToStationName then
-        SetRadioToStationName(stationName)
-    end
-
-    S.RadioActiva = true
-    S.RadioActual = stationName
-    S.BeginTransmission()
-    S.Notify("Radio iniciada: " .. tostring(label or stationName))
-end
-
-function _G.SentexSonidos.StopAll()
-    local S = _G.SentexSonidos
-
-    if SetFrontendRadioActive then
-        SetFrontendRadioActive(false)
-    end
-    if SetMobileRadioEnabledDuringGameplay then
-        SetMobileRadioEnabledDuringGameplay(false)
-    end
-
-    S.RadioActiva = false
-    S.RadioActual = nil
-    S.SetMicro(false)
-    S.Notify("Audio y microfono detenidos.")
-end
-
-function _G.SentexSonidos.TestMicro()
-    local S = _G.SentexSonidos
-    S.SetMicro(true)
-    CreateThread(function()
-        S.PlayFrontend("SELECT", "HUD_FRONTEND_DEFAULT_SOUNDSET", 3, 300)
-        Wait(1800)
-        if not S.MicroPersistente then
-            S.SetMicro(false)
-        end
-    end)
-end
-
-
 -- Estructura del menu en español (solo ASCII)
 Menu.Categories = {
     { name = "MENU PRINCIPAL", icon = "⚡" },    { name = "Jugador", icon = "👤", hasTabs = true, tabs = {
@@ -2717,64 +2591,6 @@ Menu.Categories = {
             { name = "Super punetazo", type = "toggle", value = false }
         }}
     }},
-    { name = "Auto-Farm", icon = "🚜", hasTabs = true, tabs = {
-        { name = "Trabajos", items = {
-            { name = "Auto-Recolectar", type = "toggle", value = false },
-            { name = "Auto-Procesar", type = "toggle", value = false },
-            { name = "Auto-Vender", type = "toggle", value = false },
-            { name = "", isSeparator = true, separatorText = "Configuracion" },
-            { name = "Velocidad Farm", type = "slider", value = 1.0, min = 0.5, max = 5.0, step = 0.1 }
-        }}
-    }},
-
-
-    { name = "Sonidos", icon = "🔊", hasTabs = true, tabs = {
-        { name = "GTA", items = {
-            { name = "", isSeparator = true, separatorText = "Menu y avisos" },
-            { name = "Aceptar menu", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("SELECT", "HUD_FRONTEND_DEFAULT_SOUNDSET", 1, 250) end },
-            { name = "Volver menu", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("BACK", "HUD_FRONTEND_DEFAULT_SOUNDSET", 1, 250) end },
-            { name = "Error", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("ERROR", "HUD_AMMO_SHOP_SOUNDSET", 1, 250) end },
-            { name = "Checkpoint", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("CHECKPOINT_PERFECT", "HUD_MINI_GAME_SOUNDSET", 1, 250) end },
-            { name = "Mision completada", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("Mission_Pass_Notify", "DLC_HEISTS_GENERAL_FRONTEND_SOUNDS", 1, 250) end },
-            { name = "", isSeparator = true, separatorText = "Alarmas y efectos" },
-            { name = "Alarma corta", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("10_SEC_WARNING", "HUD_MINI_GAME_SOUNDSET", 3, 550) end },
-            { name = "Alarma larga", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("10_SEC_WARNING", "HUD_MINI_GAME_SOUNDSET", 10, 550) end },
-            { name = "Pitidos rapidos", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("NAV_UP_DOWN", "HUD_FRONTEND_DEFAULT_SOUNDSET", 12, 120) end },
-            { name = "Confirmaciones", type = "action", onClick = function() _G.SentexSonidos.PlayFrontend("SELECT", "HUD_FRONTEND_DEFAULT_SOUNDSET", 8, 220) end }
-        }},
-        { name = "Radio", items = {
-            { name = "", isSeparator = true, separatorText = "Emisoras GTA" },
-            { name = "Los Santos Rock Radio", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_01_CLASS_ROCK", "Los Santos Rock Radio") end },
-            { name = "Non-Stop-Pop FM", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_02_POP", "Non-Stop-Pop FM") end },
-            { name = "Radio Los Santos", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_03_HIPHOP_NEW", "Radio Los Santos") end },
-            { name = "Channel X", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_04_PUNK", "Channel X") end },
-            { name = "West Coast Talk Radio", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_05_TALK_01", "West Coast Talk Radio") end },
-            { name = "Rebel Radio", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_06_COUNTRY", "Rebel Radio") end },
-            { name = "Soulwax FM", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_07_DANCE_01", "Soulwax FM") end },
-            { name = "East Los FM", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_08_MEXICAN", "East Los FM") end },
-            { name = "West Coast Classics", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_09_HIPHOP_OLD", "West Coast Classics") end },
-            { name = "Blue Ark", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_12_REGGAE", "Blue Ark") end },
-            { name = "Worldwide FM", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_13_JAZZ", "Worldwide FM") end },
-            { name = "FlyLo FM", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_14_DANCE_02", "FlyLo FM") end },
-            { name = "The Lowdown", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_15_MOTOWN", "The Lowdown 91.1") end },
-            { name = "Radio Mirror Park", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_16_SILVERLAKE", "Radio Mirror Park") end },
-            { name = "Space 103.2", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_17_FUNK", "Space 103.2") end },
-            { name = "Vinewood Boulevard Radio", type = "action", onClick = function() _G.SentexSonidos.StartRadio("RADIO_18_90S_ROCK", "Vinewood Boulevard Radio") end },
-            { name = "Detener radio", type = "action", onClick = function() _G.SentexSonidos.StopAll() end }
-        }},
-        { name = "Micro", items = {
-            { name = "", isSeparator = true, separatorText = "Transmision por proximidad" },
-            { name = "Mantener micro abierto", type = "toggle", value = false, onClick = function(value) _G.SentexSonidos.SetMicroPersistente(value) end },
-            { name = "Activar micro ahora", type = "action", onClick = function() _G.SentexSonidos.SetMicro(true) end },
-            { name = "Desactivar micro", type = "action", onClick = function() _G.SentexSonidos.SetMicro(false) end },
-            { name = "Prueba de micro", type = "action", onClick = function() _G.SentexSonidos.TestMicro() end },
-            { name = "Detener todo", type = "action", onClick = function() _G.SentexSonidos.StopAll() end },
-            { name = "", isSeparator = true, separatorText = "Importante" },
-            { name = "Requiere Mezcla estereo", type = "action", onClick = function() _G.SentexSonidos.Notify("Configura Mezcla estereo o un cable virtual como entrada de voz en FiveM.") end },
-            { name = "YouTube no disponible", type = "action", onClick = function() _G.SentexSonidos.Notify("Este loader no tiene NUI ni una API de audio web. YouTube no puede reproducirse directamente desde Lua.") end }
-        }}
-    }},
-
     { name = "Spawn bacanerias", icon = "🧱", hasTabs = true, tabs = {
         { name = "Rampas", items = {
             { name = "Rampa pequena", type = "action", onClick = function() _G.SentexBacanerias.Spawn("rampa_pequena") end },
@@ -2901,7 +2717,7 @@ Menu.Categories = {
         { name = "Gestion", items = {
             { name = "Distancia spawn", type = "slider", value = 45, min = 10, max = 200, step = 5, onClick = function(value) _G.SentexBacanerias.SetDistance(value) end },
             { name = "Congelar props", type = "toggle", value = true, onClick = function(value) _G.SentexBacanerias.SetFreeze(value) end },
-            { name = "Visibilidad", type = "selector", options = {"Local", "Servidor"}, selected = 1, onClick = function(index, option) _G.SentexBacanerias.SetVisibility(index, option) end },
+            { name = "Visibilidad", type = "selector", options = {"Local", "Servidor"}, selected = 2, onClick = function(index, option) _G.SentexBacanerias.SetVisibility(index, option) end },
             { name = "Limpiar bacanerias", type = "action", onClick = function() _G.SentexBacanerias.ClearProps() end }
         }}
     }},
@@ -15425,7 +15241,28 @@ local DestroyerOptions = {
     "Torre Comms",
     "Barco Naufragado",
     "Contenedor Excavacion",
-    "Grua de Portico"
+    "Grua de Portico",
+
+    -- Spawn Bacanerias > Enormes ("Grandes")
+    "Mega bloque 01",
+    "Mega bloque 02",
+    "Mega bloque 03",
+    "Mega bloque 04",
+    "Mega bloque 05",
+    "Mega rampa curva",
+    "Mega rampa de salto",
+    "Mega tubo",
+    "Mega tubo cruce",
+    "Mega anillo",
+    "Molino enorme",
+    "Grua enorme",
+    "Radar enorme",
+    "Roca colosal",
+    "Asteroide colosal",
+    "Asteroide colosal flotante",
+    "Bandera de Espana ENORME",
+    "Plataforma enorme",
+    "Contenedor enorme"
 }
 
 local giantModels = {
@@ -15439,6 +15276,28 @@ local giantModels = {
     ["Barco Naufragado"] = "prop_wrecked_ship_01",
     ["Contenedor Excavacion"] = "prop_big_dig_container",
     ["Grua de Portico"] = "prop_gantry_crane"
+}
+
+local bacaneriaDestroyerActions = {
+    ["Mega bloque 01"] = { propKey = "mega_bloque_01" },
+    ["Mega bloque 02"] = { propKey = "mega_bloque_02" },
+    ["Mega bloque 03"] = { propKey = "mega_bloque_03" },
+    ["Mega bloque 04"] = { propKey = "mega_bloque_04" },
+    ["Mega bloque 05"] = { propKey = "mega_bloque_05" },
+    ["Mega rampa curva"] = { propKey = "mega_rampa_curva" },
+    ["Mega rampa de salto"] = { propKey = "mega_rampa_salto" },
+    ["Mega tubo"] = { propKey = "mega_tubo" },
+    ["Mega tubo cruce"] = { propKey = "mega_tubo_cruce" },
+    ["Mega anillo"] = { propKey = "mega_anillo" },
+    ["Molino enorme"] = { propKey = "mega_molino" },
+    ["Grua enorme"] = { propKey = "mega_grua" },
+    ["Radar enorme"] = { propKey = "mega_radar" },
+    ["Roca colosal"] = { propKey = "mega_roca" },
+    ["Asteroide colosal"] = { propKey = "mega_asteroide" },
+    ["Asteroide colosal flotante"] = { propKey = "mega_asteroide_alto" },
+    ["Bandera de Espana ENORME"] = { presetKey = "bandera_espana_enorme" },
+    ["Plataforma enorme"] = { propKey = "plataforma_alta" },
+    ["Contenedor enorme"] = { propKey = "plataforma_metal" }
 }
 
 local function SusanoDown(vk)
@@ -15608,6 +15467,22 @@ function HandleDestroyerInput()
             else
                 SpawnSafeProp("stt_prop_stunt_bblock_huge_04", finalPos)
             end
+        elseif bacaneriaDestroyerActions[opt] then
+            local action = bacaneriaDestroyerActions[opt]
+            local B = _G.SentexBacanerias
+
+            if B and action.presetKey then
+                B.SpawnPreset(action.presetKey, finalPos, d_cam_rot.z)
+            elseif B and action.propKey and B.PropDefs[action.propKey] then
+                local def = B.PropDefs[action.propKey]
+                local spawnPos = vector3(finalPos.x, finalPos.y, finalPos.z + (def.zOffset or 0.0))
+                local obj = B.CreatePropFromDef(def, spawnPos, d_cam_rot.z)
+                if obj then
+                    B.Notify("~g~Freecam: " .. tostring(def.label or action.propKey))
+                end
+            else
+                TriggerEvent('chat:addMessage', {args = {"~r~No se pudo resolver la opcion de Bacanerias."}})
+            end
         elseif giantModels[opt] then
             SpawnSafeProp(giantModels[opt], finalPos)
         end
@@ -15628,7 +15503,7 @@ function DrawDestroyerFreecamMenu()
         scroll_offset_destroyer = selected_destroyer_opt - maxVis
     end
 
-    local startY = sh - 150.0
+    local startY = sh * 0.62 -- Ligeramente por debajo del centro, más arriba que antes.
     local centerX = sw / 2
     local indicator = string.format("%d / %d", selected_destroyer_opt, #DestroyerOptions)
 
@@ -15638,9 +15513,9 @@ function DrawDestroyerFreecamMenu()
         local idx = scroll_offset_destroyer + i
         if idx <= #DestroyerOptions then
             local isSel = idx == selected_destroyer_opt
-            local r = isSel and 0.58 or 0.80
-            local g = isSel and 0.00 or 0.80
-            local b = isSel and 0.83 or 0.80
+            local r = isSel and 0.00 or 0.80
+            local g = isSel and 0.85 or 0.80
+            local b = isSel and 1.00 or 0.80
             Susano.DrawText(centerX - 50, startY + (i-1)*35, DestroyerOptions[idx], isSel and 24.0 or 18.0, r, g, b, 1.0)
         end
     end
@@ -15778,20 +15653,6 @@ Citizen.CreateThread(function()
     end
 end)
 
--- Bucle de Auto-Farm
-Citizen.CreateThread(function()
-    while true do
-        local itemFarm = FindItem("Auto-Farm", "Trabajos", "Auto-Recolectar")
-        if itemFarm and itemFarm.value then
-            local ped = PlayerPedId()
-            -- Simular pulsacion de tecla 'E' para recolectar
-            SetControlValueNextFrame(0, 38)
-            Citizen.Wait(1000)
-        else
-            Citizen.Wait(2000)
-        end
-    end
-end)
 
 -- ============================================================
 -- LIMPIEZA DEFENSIVA DE OPCIONES NO PERMITIDAS
