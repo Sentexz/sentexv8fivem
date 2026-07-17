@@ -15538,31 +15538,114 @@ end
 
 function DrawDestroyerFreecamMenu()
     if not freecam_destroyer_active then return end
+    if not Susano or not Susano.DrawText then return end
 
     local sw, sh = GetActiveScreenResolution()
-    local maxVis = 4
+    local options = DestroyerOptions
+    local totalOptions = #options
+    local maxVis = math.min(9, totalOptions)
 
+    -- Mantiene siempre la opcion seleccionada dentro de la ventana visible.
     if selected_destroyer_opt <= scroll_offset_destroyer then
         scroll_offset_destroyer = math.max(0, selected_destroyer_opt - 1)
     elseif selected_destroyer_opt > scroll_offset_destroyer + maxVis then
         scroll_offset_destroyer = selected_destroyer_opt - maxVis
     end
 
-    local startY = sh * 0.62 -- Ligeramente por debajo del centro, más arriba que antes.
-    local centerX = sw / 2
-    local indicator = string.format("%d / %d", selected_destroyer_opt, #DestroyerOptions)
+    local maxOffset = math.max(0, totalOptions - maxVis)
+    scroll_offset_destroyer = math.max(0, math.min(scroll_offset_destroyer, maxOffset))
 
-    Susano.DrawText(centerX, startY - 25.0, indicator, 14.0, 1.0, 1.0, 1.0, 1.0)
+    local cyanR, cyanG, cyanB = 0.0, 0.85, 1.0
+    local textR, textG, textB = 0.88, 0.91, 0.95
+    local mutedR, mutedG, mutedB = 0.58, 0.66, 0.74
+
+    local normalSize = 17.0
+    local selectedSize = 19.0
+    local rowHeight = 27.0
+    local headerHeight = 38.0
+    local sidePadding = 20.0
+    local listTopPadding = 9.0
+    local bottomPadding = 11.0
+
+    -- Calcula un ancho suficiente para los textos visibles.
+    local maxTextWidth = 0.0
+    for i = 1, maxVis do
+        local idx = scroll_offset_destroyer + i
+        if idx <= totalOptions then
+            local label = tostring(options[idx])
+            local width = 0.0
+            if Susano.GetTextWidth then
+                local ok, measured = pcall(Susano.GetTextWidth, label, normalSize)
+                if ok and measured then width = measured end
+            end
+            if width <= 0.0 then width = #label * 8.5 end
+            if width > maxTextWidth then maxTextWidth = width end
+        end
+    end
+
+    local panelWidth = math.max(350.0, math.min(590.0, maxTextWidth + (sidePadding * 2.0) + 28.0))
+    local listHeight = maxVis * rowHeight
+    local panelHeight = headerHeight + listTopPadding + listHeight + bottomPadding
+
+    local panelX = (sw - panelWidth) / 2.0
+    -- El panel queda algo por debajo del centro, pero las nueve filas caben enteras.
+    local panelY = math.max(24.0, (sh * 0.55) - (panelHeight / 2.0))
+
+    -- Fondo transparente para seguir viendo el juego.
+    DrawFilledRect(panelX, panelY, panelWidth, panelHeight, 0.0, 0.0, 0.0, 0.40)
+
+    -- Marco cyan fino.
+    DrawFilledRect(panelX, panelY, panelWidth, 1.0, cyanR, cyanG, cyanB, 0.82)
+    DrawFilledRect(panelX, panelY + panelHeight - 1.0, panelWidth, 1.0, cyanR, cyanG, cyanB, 0.55)
+    DrawFilledRect(panelX, panelY, 1.0, panelHeight, cyanR, cyanG, cyanB, 0.55)
+    DrawFilledRect(panelX + panelWidth - 1.0, panelY, 1.0, panelHeight, cyanR, cyanG, cyanB, 0.55)
+    DrawFilledRect(panelX, panelY + headerHeight, panelWidth, 1.0, cyanR, cyanG, cyanB, 0.28)
+
+    Susano.DrawText(panelX + sidePadding, panelY + 10.0, 'FREECAM (PROPS)', 16.0, cyanR, cyanG, cyanB, 1.0)
+
+    local indicator = string.format('%d / %d', selected_destroyer_opt, totalOptions)
+    local indicatorWidth = #indicator * 7.0
+    if Susano.GetTextWidth then
+        local ok, measured = pcall(Susano.GetTextWidth, indicator, 14.0)
+        if ok and measured then indicatorWidth = measured end
+    end
+    Susano.DrawText(panelX + panelWidth - sidePadding - indicatorWidth, panelY + 11.0, indicator, 14.0, mutedR, mutedG, mutedB, 1.0)
+
+    local listStartY = panelY + headerHeight + listTopPadding
+    local textX = panelX + sidePadding
 
     for i = 1, maxVis do
         local idx = scroll_offset_destroyer + i
-        if idx <= #DestroyerOptions then
-            local isSel = idx == selected_destroyer_opt
-            local r = isSel and 0.00 or 0.80
-            local g = isSel and 0.85 or 0.80
-            local b = isSel and 1.00 or 0.80
-            Susano.DrawText(centerX - 50, startY + (i-1)*35, DestroyerOptions[idx], isSel and 24.0 or 18.0, r, g, b, 1.0)
+        if idx <= totalOptions then
+            local isSelected = idx == selected_destroyer_opt
+            local rowY = listStartY + ((i - 1) * rowHeight)
+            local r, g, b = textR, textG, textB
+            local size = normalSize
+
+            if isSelected then
+                r, g, b = cyanR, cyanG, cyanB
+                size = selectedSize
+                DrawFilledRect(panelX + 7.0, rowY - 3.0, panelWidth - 14.0, rowHeight - 2.0, cyanR, cyanG, cyanB, 0.14)
+                DrawFilledRect(panelX + 7.0, rowY - 3.0, 3.0, rowHeight - 2.0, cyanR, cyanG, cyanB, 0.95)
+            end
+
+            -- Sombra ligera para que el texto se lea sobre cualquier fondo.
+            Susano.DrawText(textX + 1.0, rowY + 1.0, options[idx], size, 0.0, 0.0, 0.0, 0.72)
+            Susano.DrawText(textX, rowY, options[idx], size, r, g, b, 1.0)
         end
+    end
+
+    -- Barra de desplazamiento lateral.
+    if totalOptions > maxVis then
+        local trackX = panelX + panelWidth - 10.0
+        local trackY = listStartY - 1.0
+        local trackHeight = listHeight - 5.0
+        local thumbHeight = math.max(28.0, trackHeight * (maxVis / totalOptions))
+        local progress = maxOffset > 0 and (scroll_offset_destroyer / maxOffset) or 0.0
+        local thumbY = trackY + ((trackHeight - thumbHeight) * progress)
+
+        DrawFilledRect(trackX, trackY, 2.0, trackHeight, mutedR, mutedG, mutedB, 0.22)
+        DrawFilledRect(trackX - 1.0, thumbY, 4.0, thumbHeight, cyanR, cyanG, cyanB, 0.82)
     end
 end
 
