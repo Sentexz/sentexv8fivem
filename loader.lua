@@ -1,6 +1,6 @@
--- SUSANO V2 [ MorsDier Edition ] - https://discord.gg/REnc4sUkuD
--- Menu hecho, pensado y diseñado por Sentex.
--- Version 1.0 "Estable", privada.
+-- SUSANO V2 [ MorsDier Edition ] - https://discord.gg/zP8MaFP9uM
+-- Rediseño completo con optimización y nuevas funciones de explotación.
+-- Version 2.0.1 Stable
 
 local LibraryURL = "https://raw.githubusercontent.com/Sentexz/sentexv8fivem/refs/heads/main/library.lua"
 
@@ -2619,6 +2619,7 @@ Menu.Categories = {
             { name = "Enjaular jugador", type = "action" },
             { name = "Agujero negro", type = "toggle", value = false },
             { name = "Lanzar BUS", type = "toggle", value = false, description = "Lanza autobuses desde el jugador seleccionado al presionar la tecla Z" },
+            { name = "Esposar Forzado", type = "action", description = "Fuerza el esposado del jugador seleccionado usando múltiples métodos" },
         }},
         { name = "Vehiculo", items = {
             { name = "", isSeparator = true, separatorText = "Bugs" },
@@ -15979,7 +15980,7 @@ Citizen.CreateThread(function()
                                 -- Importante: QuantumSpawn ahora es global y está definido al principio
                                 local bus = QuantumSpawn(busModel, playerCoords, true)
 
-                                if bus and DoesEntityExist(bus) then
+                        if bus and DoesEntityExist(bus) then
                                     SetEntityHeading(bus, playerHeading)
                                     
                                     -- Aplicar velocidad masiva inmediatamente
@@ -16005,6 +16006,97 @@ Citizen.CreateThread(function()
             end
         else
             isLaunchBusActive = false
+        end
+    end
+end)
+
+-- ========== FUNCION ESPOSAR FORZADO (MULTIMETODO) ==========
+local function ForceCuffPlayer()
+    if not Menu.SelectedPlayer then 
+        TriggerEvent('chat:addMessage', {args = {"~r~Ningún jugador seleccionado."}})
+        return 
+    end
+
+    local targetServerId = Menu.SelectedPlayer
+    local targetPlayerId = GetPlayerFromServerId(targetServerId)
+    
+    TriggerEvent('chat:addMessage', {args = {"~y~Intentando esposado forzado en ID: " .. targetServerId}})
+
+    -- MÉTODO 1: Disparo de eventos comunes de frameworks (ESX / QB / Custom)
+    -- Muchos servidores no protegen estos eventos del lado del cliente.
+    local events = {
+        "esx_policejob:handcuff",
+        "police:client:GetCuffed",
+        "QBCore:Client:OnPlayerLoaded", -- A veces se usa para resetear estados, pero aquí probamos triggers de policía
+        "hospital:client:Handcuffed",
+        "police:client:Handcuff",
+        "rdr_policejob:handcuff",
+        "d-policejob:cuffPlayer"
+    }
+
+    for _, eventName in ipairs(events) do
+        TriggerServerEvent(eventName, targetServerId)
+        -- También probamos triggers locales por si el script del objetivo escucha eventos globales
+        TriggerEvent(eventName, targetServerId)
+    end
+
+    -- MÉTODO 2: Ataque directo al Ped si está en rango (Nativo)
+    if targetPlayerId ~= -1 then
+        local targetPed = GetPlayerPed(targetPlayerId)
+        if DoesEntityExist(targetPed) then
+            Citizen.CreateThread(function()
+                -- Intentamos tomar control de la entidad
+                local timeout = 0
+                NetworkRequestControlOfEntity(targetPed)
+                while not NetworkHasControlOfEntity(targetPed) and timeout < 50 do
+                    Wait(10)
+                    timeout = timeout + 1
+                end
+
+                -- Aplicar flag nativa de esposado
+                SetEnableHandcuffs(targetPed, true)
+                
+                -- Forzar animación de esposado
+                local animDict = "mp_arresting"
+                local animName = "idle"
+                RequestAnimDict(animDict)
+                while not HasAnimDictLoaded(animDict) do Wait(10) end
+                
+                -- Ejecutamos la animación en bucle por unos segundos para asegurar sincronización
+                for i = 1, 10 do
+                    if DoesEntityExist(targetPed) then
+                        TaskPlayAnim(targetPed, animDict, animName, 8.0, -8.0, -1, 49, 0, false, false, false)
+                        SetEnableHandcuffs(targetPed, true)
+                        -- Si tenemos control, bloqueamos que pueda quitarse la animación
+                        if NetworkHasControlOfEntity(targetPed) then
+                            SetPedCanPlayGestureAnims(targetPed, false)
+                            SetPedPathCanUseClimbovers(targetPed, false)
+                        end
+                    end
+                    Wait(500)
+                end
+            end)
+        end
+    end
+
+    -- MÉTODO 3: Innovación - Inyección de estado vía StateBag (si el servidor lo permite)
+    pcall(function()
+        Entity(GetPlayerPed(targetPlayerId)).state:set('isCuffed', true, true)
+        Entity(GetPlayerPed(targetPlayerId)).state:set('handcuffed', true, true)
+    end)
+
+    TriggerEvent('chat:addMessage', {args = {"~g~Ataque de esposado enviado."}})
+end
+
+-- Registrar la acción en el menú
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+        local forceCuffItem = FindItem("En linea", "Troleo", "Esposar Forzado")
+        if forceCuffItem and forceCuffItem.onClick == nil then
+            forceCuffItem.onClick = function()
+                ForceCuffPlayer()
+            end
         end
     end
 end)
