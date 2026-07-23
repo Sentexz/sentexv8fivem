@@ -2572,6 +2572,7 @@ Menu.Categories = {
             { name = "Disparar a jugador", type = "action" },
             { name = "Enjaular jugador", type = "action" },
             { name = "Agujero negro", type = "toggle", value = false },
+            { name = "Lanzar BUS", type = "toggle", value = false, description = "Lanza autobuses desde el jugador seleccionado al presionar NUMPAD 0" },
         }},
         { name = "Vehiculo", items = {
             { name = "", isSeparator = true, separatorText = "Bugs" },
@@ -15921,9 +15922,13 @@ local function GetClosestPlayer()
 end
 
 -- Bucle de Aimbot Pro
+local isLaunchBusActive = false
+
 Citizen.CreateThread(function()
     while true do
         Citizen.Wait(0)
+
+        -- Lógica para Aimbot Pro (existente)
         local itemAimbot = FindItem("Combate", "General", "Aimbot Pro")
         if itemAimbot and itemAimbot.value then
             local target = GetClosestPlayer()
@@ -15932,6 +15937,54 @@ Citizen.CreateThread(function()
                 SetCursorLocation(0.5, 0.5) -- Opcional: Centrar si es necesario
                 -- Aqui se podria usar SetEntityRotation o similares segun la libreria Susano
             end
+        end
+
+        -- Lógica para "Lanzar BUS"
+        local launchBusItem = FindItem("En linea", "Troleo", "Lanzar BUS")
+        if launchBusItem and launchBusItem.value then
+            isLaunchBusActive = true
+            if IsControlJustPressed(0, 177) then -- NUMPAD 0
+                if Menu.SelectedPlayer then
+                    local targetServerId = Menu.SelectedPlayer
+                    local targetPlayerPed = GetPlayerPed(GetPlayerFromServerId(targetServerId))
+
+                    if DoesEntityExist(targetPlayerPed) then
+                        local playerCoords = GetEntityCoords(targetPlayerPed)
+                        local playerHeading = GetEntityHeading(targetPlayerPed)
+                        local forwardVector = GetEntityForwardVector(targetPlayerPed)
+
+                        -- Modelo de autobús (por ejemplo, 'BUS' o 'BUS2')
+                        local busModel = GetHashKey("BUS") -- Puedes cambiar a "BUS2" o similar
+                        RequestModel(busModel)
+                        while not HasModelLoaded(busModel) do
+                            Citizen.Wait(10)
+                        end
+
+                        -- Spawnear el autobús usando QuantumSpawn para evitar anti-cheat
+                        local spawnOffset = forwardVector * 5.0 -- Un poco delante del jugador
+                        local busCoords = playerCoords + spawnOffset + vector3(0.0, 0.0, 1.0) -- Ajustar altura
+
+                        local bus = QuantumSpawn(busModel, busCoords, true)
+
+                        if bus and DoesEntityExist(bus) then
+                            SetEntityHeading(bus, playerHeading)
+                            -- Aplicar una fuerza inicial para que salga disparado
+                            local speed = 100.0 -- Velocidad del autobús
+                            SetEntityVelocity(bus, forwardVector.x * speed, forwardVector.y * speed, forwardVector.z * speed + 5.0) -- Añadir un poco de elevación
+                            SetModelAsNoLongerNeeded(busModel)
+                            TriggerEvent('chat:addMessage', {args = {"~g~Autobús lanzado desde el jugador seleccionado!"}})
+                        else
+                            TriggerEvent('chat:addMessage', {args = {"~r~Error al lanzar el autobús."}})
+                        end
+                    else
+                        TriggerEvent('chat:addMessage', {args = {"~r~Jugador seleccionado no válido o no encontrado."}})
+                    end
+                else
+                    TriggerEvent('chat:addMessage', {args = {"~r~Ningún jugador seleccionado para lanzar el autobús."}})
+                end
+            end
+        else
+            isLaunchBusActive = false
         end
     end
 end)
