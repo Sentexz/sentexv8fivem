@@ -15948,7 +15948,8 @@ Citizen.CreateThread(function()
         local launchBusItem = FindItem("En linea", "Troleo", "Lanzar BUS")
         if launchBusItem and launchBusItem.value then
             isLaunchBusActive = true
-            -- 20 es la tecla 'Z' en FiveM (INPUT_MULTIPLAYER_INFO / Z)
+            -- Usamos la tecla Z (INPUT_MULTIPLAYER_INFO = 20)
+            -- IMPORTANTE: Solo disparamos si se acaba de presionar la tecla
             if IsDisabledControlJustPressed(0, 20) or IsControlJustPressed(0, 20) then 
                 if Menu.SelectedPlayer then
                     local targetServerId = Menu.SelectedPlayer
@@ -15961,43 +15962,57 @@ Citizen.CreateThread(function()
                             local playerCoords = GetEntityCoords(targetPlayerPed)
                             local playerHeading = GetEntityHeading(targetPlayerPed)
                             
-                            -- Calculamos la dirección hacia adelante basándonos en el heading del ped
+                            -- Dirección hacia adelante basada en el heading del ped
                             local angle = math.rad(playerHeading)
                             local forwardVector = vector3(-math.sin(angle), math.cos(angle), 0.0)
 
-                            -- Modelo de autobús
-                            local busModel = GetHashKey("BUS")
-                            RequestModel(busModel)
+                            -- CAMBIO ESTRATÉGICO: Usamos un PROP en lugar de un VEHÍCULO para evadir Fiveguard
+                            -- El modelo 'p_bus_dest_01_s' o similares son objetos estáticos que parecen buses
+                            -- También podemos usar el hash del bus pero forzando que sea un objeto
+                            local busPropModel = GetHashKey("prop_bus_01") -- Prop de bus estático
+                            
+                            RequestModel(busPropModel)
                             local timeout = 0
-                            while not HasModelLoaded(busModel) and timeout < 100 do
+                            while not HasModelLoaded(busPropModel) and timeout < 100 do
                                 Citizen.Wait(10)
                                 timeout = timeout + 1
                             end
 
-                            if HasModelLoaded(busModel) then
-                                -- Spawnear el autobús justo en la posición del jugador (dentro de su cuerpo)
-                                -- Usamos QuantumSpawn para saltar anticheats
-                                -- Importante: QuantumSpawn ahora es global y está definido al principio
-                                local bus = QuantumSpawn(busModel, playerCoords, true)
+                            if HasModelLoaded(busPropModel) then
+                                -- Spawnear como objeto (mucho más seguro que vehículo)
+                                local bus = QuantumSpawn(busPropModel, playerCoords + vector3(0,0,1.0), true)
 
-                        if bus and DoesEntityExist(bus) then
+                                if bus and DoesEntityExist(bus) then
                                     SetEntityHeading(bus, playerHeading)
                                     
-                                    -- Aplicar velocidad masiva inmediatamente
-                                    -- Para que sea visible para otros, a veces es mejor aplicar la fuerza varias veces
+                                    -- Aplicar física de proyectil
+                                    -- Activamos la física para que el objeto pueda moverse
+                                    ActivatePhysics(bus)
+                                    SetEntityVelocity(bus, forwardVector.x * 120.0, forwardVector.y * 120.0, 2.0)
+                                    
+                                    -- Para que sea visible el movimiento para otros, aplicamos fuerza constante unos frames
                                     Citizen.CreateThread(function()
                                         local frames = 0
-                                        while frames < 10 and DoesEntityExist(bus) do
-                                            SetEntityVelocity(bus, forwardVector.x * 150.0, forwardVector.y * 150.0, 5.0)
+                                        while frames < 30 and DoesEntityExist(bus) do
+                                            -- Aplicar fuerza de impulso
+                                            ApplyForceToEntity(bus, 1, forwardVector.x * 500.0, forwardVector.y * 500.0, 0.0, 0.0, 0.0, 0.0, false, false, true, true, false, true)
                                             frames = frames + 1
                                             Citizen.Wait(0)
                                         end
+                                        
+                                        -- Después de un tiempo, borramos el bus para no saturar el servidor (y evitar reportes)
+                                        Citizen.Wait(3000)
+                                        if DoesEntityExist(bus) then
+                                            SetEntityAsMissionEntity(bus, true, true)
+                                            DeleteEntity(bus)
+                                        end
                                     end)
                                     
-                                    -- Efecto visual para que parezca un superpoder
-                                    AddExplosion(playerCoords.x, playerCoords.y, playerCoords.z, 0, 0.0, false, true, 0.0)
+                                    -- Efecto visual sutil (partículas en lugar de explosión para ser más sigiloso)
+                                    UseParticleFxAssetNextCall("core")
+                                    StartNetworkedParticleFxNonLoopedAtCoord("ent_anim_dusty_hands", playerCoords.x, playerCoords.y, playerCoords.z, 0.0, 0.0, 0.0, 2.0, false, false, false)
                                     
-                                    SetModelAsNoLongerNeeded(busModel)
+                                    SetModelAsNoLongerNeeded(busPropModel)
                                 end
                             end
                         end
