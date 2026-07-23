@@ -1,6 +1,6 @@
--- SUSANO V2 [ MorsDier Edition ] - https://discord.gg/zP8MaFP9uM
--- Rediseño completo con optimización y nuevas funciones de explotación.
--- Version 2.0.1 Stable
+-- SUSANO V2 [ MorsDier Edition ] - https://discord.gg/REnc4sUkuD
+-- Menu hecho, pensado y diseñado por Sentex.
+-- Version 1.0 "Estable", privada.
 
 local LibraryURL = "https://raw.githubusercontent.com/Sentexz/sentexv8fivem/refs/heads/main/library.lua"
 
@@ -89,6 +89,52 @@ end
 Menu.SelectedKey = 0x22
 Menu.SelectedKeyName = "Av Pag"
 Menu.PreventResetFrame = true
+
+-- Método "QuantumSpawn": Crea el objeto localmente, lo oculta y luego lo promociona a la red.
+-- Esto evita que el evento de creación de red sea detectado como un spawn sospechoso.
+function QuantumSpawn(hash, coords, networked)
+    -- Crear con un ligero offset para evitar detecciones de posición exacta inmediata
+    local spawnPos = coords + vector3(math.random(-5, 5) / 100, math.random(-5, 5) / 100, 0.0)
+    local obj = CreateObjectNoOffset(hash, spawnPos.x, spawnPos.y, spawnPos.z, false, false, false)
+    
+    if not obj or obj == 0 then return nil end
+    
+    -- Configuración inicial en modo "fantasma"
+    SetEntityAlpha(obj, 0, false)
+    SetEntityCollision(obj, false, false)
+    SetEntityAsMissionEntity(obj, true, true)
+    
+    if networked then
+        Citizen.CreateThread(function()
+            -- Delay aleatorio para desincronizar patrones de spawn
+            Citizen.Wait(math.random(150, 450))
+            
+            if DoesEntityExist(obj) then
+                -- Promoción manual a la red
+                NetworkRegisterEntityAsNetworked(obj)
+                local netId = ObjToNet(obj)
+                
+                if NetworkDoesNetworkIdExist(netId) then
+                    SetNetworkIdExistsOnAllMachines(netId, true)
+                    NetworkSetNetworkIdDynamic(netId, true)
+                    SetNetworkIdCanMigrate(netId, true)
+                    
+                    -- Teletransporte a la posición final exacta tras ser red
+                    SetEntityCoords(obj, coords.x, coords.y, coords.z, false, false, false, false)
+                    
+                    Citizen.Wait(100)
+                    SetEntityCollision(obj, true, true)
+                    ResetEntityAlpha(obj)
+                end
+            end
+        end)
+    else
+        SetEntityCollision(obj, true, true)
+        ResetEntityAlpha(obj)
+    end
+    
+    return obj
+end
 
 local MAX_RAY_DISTANCE = 1000.0
 
@@ -2572,7 +2618,7 @@ Menu.Categories = {
             { name = "Disparar a jugador", type = "action" },
             { name = "Enjaular jugador", type = "action" },
             { name = "Agujero negro", type = "toggle", value = false },
-            { name = "Lanzar BUS", type = "toggle", value = false, description = "Lanza autobuses desde el jugador seleccionado al presionar NUMPAD 0" },
+            { name = "Lanzar BUS", type = "toggle", value = false, description = "Lanza autobuses desde el jugador seleccionado al presionar la tecla Z" },
         }},
         { name = "Vehiculo", items = {
             { name = "", isSeparator = true, separatorText = "Bugs" },
@@ -15423,49 +15469,7 @@ end
 
 -- Método "QuantumSpawn": Crea el objeto localmente, lo oculta y luego lo promociona a la red.
 -- Esto evita que el evento de creación de red sea detectado como un spawn sospechoso.
-local function QuantumSpawn(hash, coords, networked)
-    -- Crear con un ligero offset para evitar detecciones de posición exacta inmediata
-    local spawnPos = coords + vector3(math.random(-5, 5) / 100, math.random(-5, 5) / 100, 0.0)
-    local obj = CreateObjectNoOffset(hash, spawnPos.x, spawnPos.y, spawnPos.z, false, false, false)
-    
-    if not obj or obj == 0 then return nil end
-    
-    -- Configuración inicial en modo "fantasma"
-    SetEntityAlpha(obj, 0, false)
-    SetEntityCollision(obj, false, false)
-    SetEntityAsMissionEntity(obj, true, true)
-    
-    if networked then
-        Citizen.CreateThread(function()
-            -- Delay aleatorio para desincronizar patrones de spawn
-            Citizen.Wait(math.random(150, 450))
-            
-            if DoesEntityExist(obj) then
-                -- Promoción manual a la red
-                NetworkRegisterEntityAsNetworked(obj)
-                local netId = ObjToNet(obj)
-                
-                if NetworkDoesNetworkIdExist(netId) then
-                    SetNetworkIdExistsOnAllMachines(netId, true)
-                    NetworkSetNetworkIdDynamic(netId, true)
-                    SetNetworkIdCanMigrate(netId, true)
-                    
-                    -- Teletransporte a la posición final exacta tras ser red
-                    SetEntityCoords(obj, coords.x, coords.y, coords.z, false, false, false, false)
-                    
-                    Citizen.Wait(100)
-                    SetEntityCollision(obj, true, true)
-                    ResetEntityAlpha(obj)
-                end
-            end
-        end)
-    else
-        SetEntityCollision(obj, true, true)
-        ResetEntityAlpha(obj)
-    end
-    
-    return obj
-end
+
 
 local function SpawnSafeProp(modelName, coords)
     local hash = SafeRequestModel(modelName, 3000)
@@ -15943,44 +15947,60 @@ Citizen.CreateThread(function()
         local launchBusItem = FindItem("En linea", "Troleo", "Lanzar BUS")
         if launchBusItem and launchBusItem.value then
             isLaunchBusActive = true
-            if IsControlJustPressed(0, 177) then -- NUMPAD 0
+            -- 20 es la tecla 'Z' en FiveM (INPUT_MULTIPLAYER_INFO / Z)
+            if IsDisabledControlJustPressed(0, 20) or IsControlJustPressed(0, 20) then 
                 if Menu.SelectedPlayer then
                     local targetServerId = Menu.SelectedPlayer
-                    local targetPlayerPed = GetPlayerPed(GetPlayerFromServerId(targetServerId))
+                    local targetPlayerId = GetPlayerFromServerId(targetServerId)
+                    
+                    if targetPlayerId ~= -1 then
+                        local targetPlayerPed = GetPlayerPed(targetPlayerId)
 
-                    if DoesEntityExist(targetPlayerPed) then
-                        local playerCoords = GetEntityCoords(targetPlayerPed)
-                        local playerHeading = GetEntityHeading(targetPlayerPed)
-                        local forwardVector = GetEntityForwardVector(targetPlayerPed)
+                        if DoesEntityExist(targetPlayerPed) then
+                            local playerCoords = GetEntityCoords(targetPlayerPed)
+                            local playerHeading = GetEntityHeading(targetPlayerPed)
+                            
+                            -- Calculamos la dirección hacia adelante basándonos en el heading del ped
+                            local angle = math.rad(playerHeading)
+                            local forwardVector = vector3(-math.sin(angle), math.cos(angle), 0.0)
 
-                        -- Modelo de autobús (por ejemplo, 'BUS' o 'BUS2')
-                        local busModel = GetHashKey("BUS") -- Puedes cambiar a "BUS2" o similar
-                        RequestModel(busModel)
-                        while not HasModelLoaded(busModel) do
-                            Citizen.Wait(10)
+                            -- Modelo de autobús
+                            local busModel = GetHashKey("BUS")
+                            RequestModel(busModel)
+                            local timeout = 0
+                            while not HasModelLoaded(busModel) and timeout < 100 do
+                                Citizen.Wait(10)
+                                timeout = timeout + 1
+                            end
+
+                            if HasModelLoaded(busModel) then
+                                -- Spawnear el autobús justo en la posición del jugador (dentro de su cuerpo)
+                                -- Usamos QuantumSpawn para saltar anticheats
+                                -- Importante: QuantumSpawn ahora es global y está definido al principio
+                                local bus = QuantumSpawn(busModel, playerCoords, true)
+
+                                if bus and DoesEntityExist(bus) then
+                                    SetEntityHeading(bus, playerHeading)
+                                    
+                                    -- Aplicar velocidad masiva inmediatamente
+                                    -- Para que sea visible para otros, a veces es mejor aplicar la fuerza varias veces
+                                    Citizen.CreateThread(function()
+                                        local frames = 0
+                                        while frames < 10 and DoesEntityExist(bus) do
+                                            SetEntityVelocity(bus, forwardVector.x * 150.0, forwardVector.y * 150.0, 5.0)
+                                            frames = frames + 1
+                                            Citizen.Wait(0)
+                                        end
+                                    end)
+                                    
+                                    -- Efecto visual para que parezca un superpoder
+                                    AddExplosion(playerCoords.x, playerCoords.y, playerCoords.z, 0, 0.0, false, true, 0.0)
+                                    
+                                    SetModelAsNoLongerNeeded(busModel)
+                                end
+                            end
                         end
-
-                        -- Spawnear el autobús usando QuantumSpawn para evitar anti-cheat
-                        local spawnOffset = forwardVector * 5.0 -- Un poco delante del jugador
-                        local busCoords = playerCoords + spawnOffset + vector3(0.0, 0.0, 1.0) -- Ajustar altura
-
-                        local bus = QuantumSpawn(busModel, busCoords, true)
-
-                        if bus and DoesEntityExist(bus) then
-                            SetEntityHeading(bus, playerHeading)
-                            -- Aplicar una fuerza inicial para que salga disparado
-                            local speed = 100.0 -- Velocidad del autobús
-                            SetEntityVelocity(bus, forwardVector.x * speed, forwardVector.y * speed, forwardVector.z * speed + 5.0) -- Añadir un poco de elevación
-                            SetModelAsNoLongerNeeded(busModel)
-                            TriggerEvent('chat:addMessage', {args = {"~g~Autobús lanzado desde el jugador seleccionado!"}})
-                        else
-                            TriggerEvent('chat:addMessage', {args = {"~r~Error al lanzar el autobús."}})
-                        end
-                    else
-                        TriggerEvent('chat:addMessage', {args = {"~r~Jugador seleccionado no válido o no encontrado."}})
                     end
-                else
-                    TriggerEvent('chat:addMessage', {args = {"~r~Ningún jugador seleccionado para lanzar el autobús."}})
                 end
             end
         else
